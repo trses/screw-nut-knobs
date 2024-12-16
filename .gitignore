@@ -1,0 +1,8 @@
+# printer files
+*.bgcode
+
+# rendered models
+*.stl
+
+# Apple misc
+.DS_Store

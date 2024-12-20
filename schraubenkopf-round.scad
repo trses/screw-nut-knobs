@@ -1,49 +1,71 @@
 /**
  * Creates handles for hexagon head screws. Various parameters can be
  * controlled:
- * Number of knurls, distance and size of the knurls, depth of the recesses
- * (notches), radius of the rounded edge and, of course, the dimensions of
- * the screw.
+ * SIZE: M4, M5, M6, M8, the arrays can be extended for further sizes
+ * TYPE: knob for nut or screw, with or without hub, securing hub
+ * ARMS: number of "arms" of the star shaped knob
+ * QUALITY: smoothness of the rendered stl (OpenSCAD $fn value)
  *
- * The screw is fixed with an insert (lock). There are two variants:
- * * Lock on the top - allows printing without support
- *     set the parameter topLock to true (default)
- * * Lock on the bottom side - cannot come loose when the screw is screwed in,
- * but requires printing with support if the handle is to have a rounded edge.
- *     set the parameter topLock to false
- * The locks go through the whole knob such that they can be removed easily
- * unless they are glued in place. If you don't like the look just shorten the
- * fixating cylinders in the lock module.
+ * Note, that further values, e. g. distance and size of the knurls, depth
+ * of the recesses (notches), radius of the rounded edge, and the size of the
+ * hub can be modified in the source code.
  *
  * Use with caution: Because the rounded edges are generated with the Minkowski
  * operator, the computing time is quite high (in the region of 5 minutes on an
- * AppleSilicon M3 cpu with EDGE_QUALITY set to 36). For testing, the edge
- * radius should be set to 0. Alternatively, the EDGE_QUALITY can be set to a
- * very low value such as 6.
+ * AppleSilicon M3 cpu with QUALITY set to 120). For testing, the QUALITY should
+ * be set to a very low value such as 12.
  *
  * All dimensions in mm.
+ *
+ * 3D printing: I usually print them upside down with support and sand the top
+ * surface with 120 grit followed by 240 grit
  *
  * Author: Thomas Richter
  * Contact: mail@thomas-richter.info
  */
 
-
 /*****************************************
  * START PARAMETERS
  * change for 
  * - different sizes
- * - number of arms (knurls)
+ * - number of arms
  * - rendering quality
- * - radius of edges
- * - hub sizes
+ * - type of knob to be rendered
  *****************************************/
- 
-// order of parameters, names from DIN / ISO tables in (brackets)
-// Name, screwDiameter (d1), screwHeadDiameter (e), screwHeadHeight (k)
+
+// size of the metric screw or nut
+SIZE = "M4";
+
+// type to be rendered, possible values:
+// - nut: make a knob with hub for a nut
+// - nutx: make a knob without hub for a nut
+// - screw: make a knob with hub for a screw
+// - screwx: make a knob without hub for a screw
+// - hub: make a standalone hub with a cutout for a nut. This can be used as a
+// lock nut for screwx knobs
 //
-// screwHewadDiameter: largest dimension, NOT the wrench size.
-// In DIN and ISO dimension tables, this dimension is usually
-// designated as e.
+// The difference between knobs for screws and nuts is the depth of the hexagonal
+// cutout: nuts are higher than screw heads (see ISO 4017 and ISO 4032)
+// In most cases, handles for nuts are probably required (TYPE = "nut")
+TYPE = "nut";
+
+// number of arms of the star shaped knob (further down referred to as knurls)
+ARMS = 5;
+
+// The higher the better the quality, the higher the computing time
+// 120 gives a very smooth finish, computing time around 5 mins with M3 CPU
+QUALITY = 12;
+/*********** END PARAMETERS ***********/
+
+/*****************************************
+ * START CALCULATED VALUES
+ * change to get differently shaped knobs
+ *****************************************/
+// order of parameters, names from DIN / ISO tables in (brackets)
+// size, screwDiameter (d1), screwHeadDiameter (e), screwHeadHeight (k)
+//
+// note that the screwHewadDiameter is teh  largest dimension, NOT the wrench size.
+// In DIN and ISO dimension tables, this dimension is usually designated as e.
 //     ___
 //    /   \
 //    \___/
@@ -56,49 +78,48 @@ screws = [
     ["M8", 8, 14.38, 5.3]
 ];
 
-TYPE = "M6";
-
-screw = selectScrew(TYPE);
-
-// number of knurls (arms) around the circumference
-knurls = 5;
-
-// The higher the better the quality, the higher the computing time
-// 120 gives a very smooth finish, computing time around 5 mins with M3 CPU
-EDGE_QUALITY = 12;
-
-echo("quality", EDGE_QUALITY);
-
-edgeRadius = 2;
-
-// size of the hub, set to 0 for no hub
-hubDiameter = 0;
-
-hubHeight = 0;
-
-/*********** END PARAMETERS ***********/
-
-
-/*****************************************
- * START CALCULATED VALUES
- * change to get differently shaped knobs
- *****************************************/
+// order of parameters, names from DIN / ISO tables in (brackets)
+// size, threadDiameter, nutDiameter (e), nutHeight (m)
+// dimensions from DIN 934 (ISO 4032)
+nuts = [
+    ["M4", 4,  7.66, 3.2],
+    ["M5", 5,  8.79, 4.7],
+    ["M6", 6, 11.05, 5.2],
+    ["M8", 8, 14.38, 6.8]
+];
 
 // calculated values, you might want to change them to get different results
+screw = selectScrew(SIZE);
+nut = selectNut(SIZE);
+
+knurls = ARMS;
+
+// smoothness of the knob's edges. The hub's radius is half of this size to
+// compensate for oversized holes in the part this knob is screwed to
+edgeRadius = 2;
+
+// Length of the screw shank that should be inside the knob
+// note: the height of the hub is added to this value so that the actual protrusion
+// is larger
+protrusion = screw[1];
+
 screwDiameter = screw[1];
 screwHeadDiameter = screw[2];
 screwHeadHeight = screw[3];
 
+nutDiameter = nut[2];
+nutHeight = nut[3];
+
 // size of the knob, can alternatively be set to a constant value
-//knobDiameter = screwDiameter * 8;
 knobDiameter = screwDiameter * 6;
 
-// Length of the screw shank that should be inside the knob,
-// can alternatively be set to a constant value
-//protrusion = screwDiameter - 1;
-protrusion = 8;
+// size of the hub
+hubHeight = screwDiameter * 1.5;
 
-// perimeter thickness above the screw head
+// the hub has at least a wall thickness at the nut of the thread's radius
+hubDiameter = TYPE == "hub" ? nutDiameter + screwDiameter : 2 * screwDiameter;
+
+// perimeter thickness above the screw head if it should be closed
 headPerimeter = 0;
 
 // pitch of the knurls: a pitch of one means that one knurl radius ist between two knurls, a pitch of two means that two knurl radii are between two knurls. Since the circumference is constant this setting controls the radius of the knurls: the larger the pitch, the smaller the knurls. Sensible Values are 1, 2, 3
@@ -118,23 +139,38 @@ totalHeight = protrusion + screwHeadHeight + headPerimeter;
 flatCoreHeight = totalHeight - topRoundingHeight - edgeDiameter;
 
 // knob with lock at the top side
-knob();
+forNut = TYPE == "nut" || TYPE == "nutx";
+makeHub = TYPE == "nut" || TYPE == "screw";
 
-module knob(topLock = true) {
+// make the thing
+if (TYPE == "hub") {
+    hub(nut = true);
+} else {
+    knob(forNut, makeHub);
+}
+
+module knob(forNut = false, makeHub = false) {
 
     difference() {
         knobBody();
         
         // cut off the locks and the screw
         // cut hole for screw shaft
-        cylinder(h = totalHeight, d = screwDiameter, $fn = EDGE_QUALITY);
+        cylinder(h = totalHeight, d = screwDiameter, $fn = QUALITY);
 
-        // cut hexagonal hole for screw head
-        translate([0, 0, totalHeight - screwHeadHeight]) { cylinder(h = screwHeadHeight + headPerimeter, d = screwHeadDiameter, $fn = 6); }
-
-//      cube(25);
+        // cut hexagonal hole for screw head or nut
+        cutHeight = forNut ? nutHeight: screwHeadHeight + headPerimeter;
+        cutDiameter = forNut ? nutDiameter : screwHeadDiameter;
         
-    }    
+        translate([0, 0, totalHeight - cutHeight])
+            cylinder(h = cutHeight, d = cutDiameter, $fn = 6);
+    }
+    
+    // make a hub
+    if (makeHub) {
+        // if the hub is part of the knob the hub must not have a cutout for a nut because it cannot be tightened
+        rotate([180, 0, 0]) hub(nut = false);
+    }
 }
 
 module knobBody() {
@@ -165,20 +201,21 @@ module knobBody() {
     difference() {
         translate([0, 0, edgeRadius])
         minkowski(4) {
-            sphere(edgeRadius, $fn = EDGE_QUALITY);
+            sphere(edgeRadius, $fn = QUALITY);
             
             // scale for additional size of minkowski sum
             scaleFactor = (knobDiameter - edgeDiameter) / knobDiameter;
+
             scale([scaleFactor, scaleFactor, 1])
             difference() {
                 union() {
                     // core of the knob
-                    cylinder(h = flatCoreHeight + topRoundingHeight, d = rCore * 2, $fn = EDGE_QUALITY);
+                    cylinder(h = flatCoreHeight + topRoundingHeight, d = rCore * 2, $fn = QUALITY);
                     // place knurls around the core
                     for (i = [0: angleStep: 360 - angleStep]) {
                         rotate([0, 0, i]) {
                             translate([rPosK, 0, 0])
-                            cylinder(h = flatCoreHeight + topRoundingHeight, d = rK * 2, $fn = EDGE_QUALITY);
+                                cylinder(h = flatCoreHeight + topRoundingHeight, d = rK * 2, $fn = QUALITY);
                         }
                     }
                 }
@@ -192,13 +229,13 @@ module knobBody() {
                     (rTopRoundingArch^2 - topRoundingHeight^2) / (2 * topRoundingHeight);
 
                 translate([0, 0, flatCoreHeight - distCenterSurface])
-                hollowSphere(distCenterSurface + 2.5 * topRoundingHeight, topRoundingHeight + distCenterSurface, $fn = 2 * EDGE_QUALITY);
+                    hollowSphere(distCenterSurface + 2.5 * topRoundingHeight, topRoundingHeight + distCenterSurface, $fn = 2 * QUALITY);
         
                 // subtract notches around the core
                 for (i = [alpha: angleStep: 360]) {
                     rotate([0, 0, i]) {
                         translate([rPosN, 0, 0])
-                        cylinder(h = flatCoreHeight + topRoundingHeight, d = rN * 2, $fn = EDGE_QUALITY);
+                            cylinder(h = flatCoreHeight + topRoundingHeight, d = rN * 2, $fn = QUALITY);
                     }
                 }
             }
@@ -206,19 +243,25 @@ module knobBody() {
     }
 }
 
-module sphericalSector(radius, angle) {
-    rotate_extrude() {
-        difference() {
-            circle(radius);
-            
-            polygon([
-                [0, 0],
-                [radius, radius * sin(90 - angle) / cos(90 - angle)],
-                [radius, -radius],
-                [-radius, -radius],
-                [-radius, radius],
-                [0, radius]
-            ]);
+module hub(nut = false) {
+    eR = edgeRadius / 2;
+    difference() {
+        minkowski() {
+            sphere(eR, $fn = QUALITY);
+
+            cylinder(h = hubHeight - eR, d = hubDiameter - 2 * eR, $fn = QUALITY);
+        }
+        // cut hole for the screw
+        cylinder(h = hubHeight + eR * 2, d = screwDiameter, $fn = QUALITY);
+
+        // cut off excessive height from minkowski sum
+        translate([0, 0, -eR])
+            cylinder(h = eR, d = hubDiameter + eR * 2, $fn = QUALITY);
+
+        if (nut) {
+            // cut off hexagonal hole for the securing nut
+            translate([0, 0, hubHeight - screwHeadHeight])
+                cylinder(h = nutHeight, d = nutDiameter, $fn = 6);
         }
     }
 }
@@ -232,3 +275,5 @@ module hollowSphere(outerRadius, innerRadius) {
 
 // selector function to simplify the selection of the screw
 function selectScrew(item, dict = screws) = dict[search([item], dict)[0]];
+
+function selectNut(item) = selectScrew(item, nuts);

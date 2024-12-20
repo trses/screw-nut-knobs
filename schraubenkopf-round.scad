@@ -34,7 +34,7 @@
  *****************************************/
 
 // size of the metric screw or nut
-SIZE = "M4";
+SIZE = "M8";
 
 // type to be rendered, possible values:
 // - nut: make a knob with hub for a nut

@@ -5,7 +5,7 @@ The output is widely configurable, see the comments in the `scad` file for detai
 
 ## 3D printing
 * layer height: 0.2mm
-* infill: 50%
+* infill: 50% (depending on your stability requirements)
 * support: yes for knobs with hubs, no otherwise
 
 I usually print the knobs with hubs upside down and sand the top surface with 120 grit, 240 grit, and 360 grit sand paper.

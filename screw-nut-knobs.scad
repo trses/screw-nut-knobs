@@ -64,7 +64,7 @@ QUALITY = 12;
 // order of parameters, names from DIN / ISO tables in (brackets)
 // size, screwDiameter (d1), screwHeadDiameter (e), screwHeadHeight (k)
 //
-// note that the screwHewadDiameter is teh  largest dimension, NOT the wrench size.
+// note that the screwHewadDiameter is the largest dimension, NOT the wrench size.
 // In DIN and ISO dimension tables, this dimension is usually designated as e.
 //     ___
 //    /   \

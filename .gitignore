@@ -2,6 +2,7 @@
 *.bgcode
 
 # rendered models
+/printables
 *.stl
 
 # Apple misc

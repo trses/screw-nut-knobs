@@ -49,6 +49,9 @@ SIZE = "M8";
 // In most cases, handles for nuts are probably required (TYPE = "nut")
 TYPE = "nut";
 
+// rounded or flat
+SHAPE = "rounded";
+
 // number of arms of the star shaped knob (further down referred to as knurls)
 ARMS = 5;
 
@@ -132,8 +135,7 @@ notchRatio = 4;
 edgeDiameter = edgeRadius * 2;
 
 // how much the top rounding stands above the top edge
-topRoundingHeight = knobDiameter / 12;
-//topRoundingHeight = 0;
+topRoundingHeight = SHAPE == "flat" ? 0 : knobDiameter / 12;
 
 totalHeight = protrusion + screwHeadHeight + headPerimeter;
 flatCoreHeight = totalHeight - topRoundingHeight - edgeDiameter;

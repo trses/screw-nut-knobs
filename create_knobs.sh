@@ -12,7 +12,7 @@ done
 
 sizes=("M4" "M5" "M6" "M8")
 arms=(5 7)
-types=("nut" "nutx" "screw" "screwx")
+types=("nut" "nutx")
 
 for size in "${sizes[@]}"; do
     for type in "${types[@]}"; do

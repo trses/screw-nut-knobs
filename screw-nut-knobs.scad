@@ -7,7 +7,7 @@
  * ARMS: number of "arms" of the star shaped knob
  * QUALITY: smoothness of the rendered stl (OpenSCAD $fn value)
  *
- * Note, that further values, e. g. distance and size of the knurls, depth
+ * Note, that further values, e. g. distance and size of the arms, depth
  * of the recesses (notches), radius of the rounded edge, and the size of the
  * hub can be modified in the source code.
  *
@@ -64,7 +64,7 @@ TYPE = "allen";
 // M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
 SHAPE = "flat";
 
-// number of arms of the star shaped knob (further down referred to as knurls)
+// number of arms of the star shaped knob
 ARMS = 5;
 
 // The higher the better the quality, the higher the computing time
@@ -79,10 +79,9 @@ QUALITY = 12;
  * change to get differently shaped knobs
  *****************************************/
 
+// get the measures from measures.scad
 screw = selectScrew(SIZE);
 nut = selectNut(SIZE);
-
-knurls = ARMS;
 
 // smoothness of the knob's edges. The hub's radius is half of this size to
 // compensate for oversized holes in the part this knob is screwed to
@@ -111,13 +110,10 @@ hubDiameter = TYPE == "allen" || TYPE == "hub"
     ? nutDiameter + screwDiameter
     : 2 * screwDiameter;
 
-// perimeter thickness above the screw head if it should be closed
-headPerimeter = 0;
-
-// pitch of the knurls: a pitch of one means that one knurl radius ist between two knurls, a pitch of two means that two knurl radii are between two knurls. Since the circumference is constant this setting controls the radius of the knurls: the larger the pitch, the smaller the knurls. Sensible Values are 1, 2, 3
-knurlPitch = 2;
-// ratio of knurl diameter to notch diameter
-// 2 means, notches have twice the radius of knurls.
+// pitch of the arms: a pitch of one means that one arm radius ist between two arms, a pitch of two means that two arm radii are between two arms. Since the circumference is constant this setting controls the radius of the arms: the larger the pitch, the smaller the arms. Sensible Values are 1, 2, 3
+armPitch = 2;
+// ratio of arm diameter to notch diameter
+// 2 means, notches have twice the radius of arms.
 // The higher the notchRatio is, the flatter the notches are. Sensible values are between 2 and 5
 notchRatio = 4;
 
@@ -126,7 +122,7 @@ edgeDiameter = edgeRadius * 2;
 // how much the top rounding stands above the top edge
 topRoundingHeight = SHAPE == "flat" ? 0 : knobDiameter / 12;
 
-totalHeight = protrusion + screwHeadHeight + headPerimeter;
+totalHeight = protrusion + screwHeadHeight;
 flatCoreHeight = totalHeight - topRoundingHeight - edgeDiameter;
 
 // configure the knob
@@ -135,7 +131,7 @@ makeHub = TYPE == "nut" || TYPE == "screw" || TYPE == "allen";
 
 // make the thing
 if (TYPE == "hub") {
-    hub(nut = true);
+    hub(nut = true, slot = true);
 } else {
     knob(forNut, makeHub);
 }
@@ -150,7 +146,7 @@ module knob(forNut = false, makeHub = false) {
         cylinder(h = totalHeight, d = screwDiameter, $fn = QUALITY);
 
         // cut hexagonal hole for screw head or nut
-        cutHeight = forNut ? nutHeight: screwHeadHeight + headPerimeter;
+        cutHeight = forNut ? nutHeight : screwHeadHeight;
         cutDiameter = forNut ? nutDiameter : screwHeadDiameter;
         // for allen screws make a circular cutout
         // for  hex screws and nuts make a hexagonal cutout
@@ -168,27 +164,27 @@ module knob(forNut = false, makeHub = false) {
 }
 
 module knobBody() {
-    angleStep = 360 / knurls;
+    angleStep = 360 / ARMS;
 
     // radius of the knob
     rKnob = knobDiameter / 2;
-    // radius of the knurls
-    rK = PI * rKnob / ((knurlPitch + 1) * knurls + PI);
+    // radius of the arms
+    rK = PI * rKnob / ((armPitch + 1) * ARMS + PI);
     // radius of the notches
     rN = notchRatio * rK;
-    // radius of the circle to place the knurls
+    // radius of the circle to place the arms
     rPosK = rKnob - rK;
 
-    // angle between knurl and notch
+    // angle between arm and notch
     alpha = angleStep / 2;
-    // angle between center of knob, center of notch, center of knurl
+    // angle between center of knob, center of notch, center of arm
     gamma = asin(sin(alpha) * rPosK / (rN + rK));
-    // angle between center of knob, center of knurl, center of notch
+    // angle between center of knob, center of arm, center of notch
     beta = 180 - alpha - gamma;
     // radius of the circle to place the notches
     rPosN = rPosK * sin(beta) / sin(gamma);
 
-    // radius of the knob's core: distance from center to touch point of knurl and notch
+    // radius of the knob's core: distance from center to touch point of arm and notch
     rCore = sqrt(rPosK^2 + rK^2 - 2 * rPosK * rK * cos(beta));
 
     difference() {
@@ -204,7 +200,7 @@ module knobBody() {
                 union() {
                     // core of the knob
                     cylinder(h = flatCoreHeight + topRoundingHeight, d = rCore * 2, $fn = QUALITY);
-                    // place knurls around the core
+                    // place arms around the core
                     for (i = [0: angleStep: 360 - angleStep]) {
                         rotate([0, 0, i]) {
                             translate([rPosK, 0, 0])
@@ -236,12 +232,13 @@ module knobBody() {
     }
 }
 
-module hub(nut = false) {
+module hub(nut = false, slot = false) {
     eR = edgeRadius / 2;
     difference() {
         minkowski() {
             sphere(eR, $fn = QUALITY);
 
+            // -eR: compensate for the enlargement by the minkowski sum
             cylinder(h = hubHeight - eR, d = hubDiameter - 2 * eR, $fn = QUALITY);
         }
         // cut hole for the screw
@@ -252,10 +249,19 @@ module hub(nut = false) {
             cylinder(h = eR, d = hubDiameter + eR * 2, $fn = QUALITY);
 
         if (nut) {
+            nutPosZ = slot ? 0 : hubHeight - nutHeight - 1;
+        
             // cut off hexagonal hole for the securing nut
             // -1 / +1: additional depth for printing tolerances
-            translate([0, 0, hubHeight - nutHeight - 1])
+            translate([0, 0, nutPosZ])
                 cylinder(h = nutHeight + 1, d = nutDiameter, $fn = 6);
+            
+            // cut of slot to insert the nut sideways
+            if (slot) {
+                translate([nutDiameter / 2, 0, 0])
+                    // use a second cylinder to avoid calculating the width of the slot
+                    cylinder(h = nutHeight + 1, d = nutDiameter, $fn = 6);
+            }
         }
     }
 }
@@ -266,8 +272,3 @@ module hollowSphere(outerRadius, innerRadius) {
         sphere(innerRadius);
     }
 }
-
-// selector function to simplify the selection of the screw
-function selectScrew(item, dict = screws) = dict[search([item], dict)[0]];
-
-function selectNut(item) = selectScrew(item, nuts);

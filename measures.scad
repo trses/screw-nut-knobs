@@ -39,3 +39,10 @@ nuts = [
     ["M6", 6, 11.05, 5.2],
     ["M8", 8, 14.38, 6.8]
 ];
+
+// selector functions to simplify the selection of the entities
+function selectFromDict(item, dict) = dict[search([item], dict)[0]];
+
+function selectScrew(size) = selectFromDict(size, screws);
+
+function selectNut(size) = selectFromDict(size, nuts);

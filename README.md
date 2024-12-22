@@ -40,4 +40,4 @@ Perimeter: 2mm everywhere
 
 Infill: 50% gyroid
 
-Support: only for the rounded knobs with hubs. On the MK4 I print those upside down and sand the top surface with 120, 240, 360 grit. Alternatively, they can also be printed the right way round. On the MK4, the overhang will not look nice despite support, but can also be sanded.
+Support: only for the rounded knobs with hubs and for the Allen screw knobs. On the MK4 I print those upside down and sand the top surface with 120, 240, 360 grit. Alternatively, they can also be printed the right way round. On the MK4, the overhang will not look nice despite support, but can also be sanded.

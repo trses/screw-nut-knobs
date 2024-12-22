@@ -1,6 +1,6 @@
 /**
- * Creates handles for hexagon head screws. Various parameters can be
- * controlled:
+ * Creates handles for hexagon head screws, Allen screws and hexagonal nuts.
+ * Various parameters can be controlled:
  * SIZE: M4, M5, M6, M8, the arrays can be extended for further sizes
  * TYPE: knob for nut or screw, with or without hub, allen screw with securing hub
  * SHAPE: flat or rounded top

@@ -209,16 +209,16 @@ module knobBody() {
                     }
                 }
 
-                // subtract a hollow sphere from the knob body
-                // radius of the top rounding when viewing from above (parallel to the knob's circumference)
-                rTopRoundingArch = knobDiameter / 2 - edgeRadius;
-                // distance from the center of the hollow sphere to the knob's surface without the rounding
-                distCenterSurface = topRoundingHeight == 0 ?
-                    0 :
-                    (rTopRoundingArch^2 - topRoundingHeight^2) / (2 * topRoundingHeight);
+                if (topRoundingHeight != 0) {
+                    // subtract a hollow sphere from the knob body
+                    // radius of the top rounding when viewing from above (parallel to the knob's circumference)
+                    rTopRoundingArch = knobDiameter / 2 - edgeRadius;
+                    // distance from the center of the hollow sphere to the knob's surface without the rounding
+                    distCenterSurface = (rTopRoundingArch^2 - topRoundingHeight^2) / (2 * topRoundingHeight);
 
-                translate([0, 0, flatCoreHeight - distCenterSurface])
-                    hollowSphere(distCenterSurface + 2.5 * topRoundingHeight, topRoundingHeight + distCenterSurface, $fn = 2 * QUALITY);
+                    translate([0, 0, flatCoreHeight - distCenterSurface])
+                        hollowSphere(distCenterSurface + 2.5 * topRoundingHeight, topRoundingHeight + distCenterSurface, $fn = 2 * QUALITY);
+                }
         
                 // subtract notches around the core
                 for (i = [alpha: angleStep: 360]) {

@@ -8,7 +8,7 @@ The numbers refer to issues in the GitHub Repository.
 
 ### 2024-12-22
 * fixes #5: nut in securing hub too low, replaced the `.stl` files
-* feature #3: added support for allen screws
+* feature #3: added support for Allen screws
 
 ## Model on Printables
 

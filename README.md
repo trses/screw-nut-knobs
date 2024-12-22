@@ -1,7 +1,7 @@
-# Parameterized star shaped knobs for hexagonal screws and nuts
+# Parameterized star shaped knobs for hexagonal and Allen screws and nuts
 
-Allows to create hand operated star shaped knobs for hexagonal screws and nuts.
-The output is widely configurable, see the comments in the `scad` file for details.
+Allows to create hand operated star shaped knobs for hexagonal and Allen screws and nuts.
+The output is widely configurable, see the comments in the `.scad` file for details.
 
 ## Updates
 The numbers refer to issues in the GitHub Repository.
@@ -15,7 +15,7 @@ The numbers refer to issues in the GitHub Repository.
 https://www.printables.com/model/1116311-hex-nut-knobs-parametric-drehknopf-knauf-sechskant
 
 ## Details
-All knobs are made for ISO 4017 / DIN 933 hex screws and ISO 4032 / DIN 934 hex nuts. The OpenSCAD source can easily be modified to make knobs with US customary units. There are different versions:
+All knobs are made for ISO 4017 / DIN 933 hex screws, ISO 4762 / DIN 912 Allen screws and ISO 4032 / DIN 934 hex nuts. The OpenSCAD source can easily be modified to make knobs with US customary units. There are different versions:
 
 1. knob with hub
 1. knob without hub

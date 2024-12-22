@@ -16,7 +16,7 @@ All knobs are made for ISO 4017 / DIN 933 hex screws and ISO 4032 / DIN 934 hex 
 
 I have made versions with 5 and 7 arms for the sizes M4, M5, M6, M8. The measures are from the ISO / DIN tables. You can modify them in the OpenSCAD file if they don't fit your needs. It is also possible to modify the number of arms, depth and width of the notches, radius of the edges, size of the hub, and the radius of the knob itself.
 
-The screw heads and nuts should be tight and can be pressed in with a vice. Depending on the horizontal expansion of your printer you might either consider this in your slicer or change the arrays named screws and nuts in the OpenSCAD file accordingly.
+The screw heads and nuts should be tight and can be pressed in with a vice. Depending on the horizontal expansion of your printer you might either consider this in your slicer or change the arrays named `screws` and `nuts` in the OpenSCAD file accordingly.
 
 Currently I cannot take photos of the knobs I made, will add them later.
 

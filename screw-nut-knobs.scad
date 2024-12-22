@@ -11,14 +11,14 @@
  * hub can be modified in the source code.
  *
  * Use with caution: Because the rounded edges are generated with the Minkowski
- * operator, the computing time is quite high (in the region of 5 minutes on an
- * AppleSilicon M3 cpu with QUALITY set to 120). For testing, the QUALITY should
- * be set to a very low value such as 12.
+ * operator, the computing time for the rounded-top version is quite high (in the
+ * region of 7 minutes on an AppleSilicon M3 cpu with QUALITY set to 120). For
+ * testing, the QUALITY should be set to a very low value such as 12.
  *
  * All dimensions in mm.
  *
- * 3D printing: I usually print them upside down with support and sand the top
- * surface with 120 grit followed by 240 grit
+ * 3D printing: I usually print the rounded-top version upside down with support
+ * and sand the top surface with 120, 240, and 360 grit
  *
  * Author: Thomas Richter
  * Contact: mail@thomas-richter.info
@@ -28,9 +28,10 @@
  * START PARAMETERS
  * change for 
  * - different sizes
+ * - type of knob to be rendered (for nut or screw)
+ * - shape of knob (rounded or flat top)
  * - number of arms
  * - rendering quality
- * - type of knob to be rendered
  *****************************************/
 
 // size of the metric screw or nut
@@ -46,10 +47,12 @@ SIZE = "M8";
 //
 // The difference between knobs for screws and nuts is the depth of the hexagonal
 // cutout: nuts are higher than screw heads (see ISO 4017 and ISO 4032)
-// In most cases, handles for nuts are probably required (TYPE = "nut")
+// In most cases, handles for nuts are probably suitable (TYPE = "nut"), even for screws
 TYPE = "nut";
 
-// rounded or flat
+// "rounded" or "flat"
+// Caution: the rounded top makes a difference of several minutes in rendering time
+// M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
 SHAPE = "rounded";
 
 // number of arms of the star shaped knob (further down referred to as knurls)

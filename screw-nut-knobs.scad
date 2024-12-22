@@ -20,6 +20,10 @@
  * 3D printing: I usually print the rounded-top version upside down with support
  * and sand the top surface with 120, 240, and 360 grit
  *
+ * License: CC BY-NC-SA 4.0
+ *          Creative Commons 4.0 Attribution — Noncommercial — Share Alike
+ *          https://creativecommons.org/licenses/by-nc-sa/4.0/
+ *
  * Author: Thomas Richter
  * Contact: mail@thomas-richter.info
  */

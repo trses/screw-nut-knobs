@@ -3,6 +3,7 @@
  * controlled:
  * SIZE: M4, M5, M6, M8, the arrays can be extended for further sizes
  * TYPE: knob for nut or screw, with or without hub, allen screw with securing hub
+ * SHAPE: flat or rounded top
  * ARMS: number of "arms" of the star shaped knob
  * QUALITY: smoothness of the rendered stl (OpenSCAD $fn value)
  *

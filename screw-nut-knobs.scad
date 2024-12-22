@@ -2,7 +2,7 @@
  * Creates handles for hexagon head screws. Various parameters can be
  * controlled:
  * SIZE: M4, M5, M6, M8, the arrays can be extended for further sizes
- * TYPE: knob for nut or screw, with or without hub, securing hub
+ * TYPE: knob for nut or screw, with or without hub, allen screw with securing hub
  * ARMS: number of "arms" of the star shaped knob
  * QUALITY: smoothness of the rendered stl (OpenSCAD $fn value)
  *
@@ -44,6 +44,7 @@ SIZE = "M8";
 // type to be rendered, possible values:
 // - nut: make a knob with hub for a nut
 // - nutx: make a knob without hub for a nut
+// - allen: make a knob with hub for an Allen screw with lock nut in the hub
 // - screw: make a knob with hub for a screw
 // - screwx: make a knob without hub for a screw
 // - hub: make a standalone hub with a cutout for a nut. This can be used as a
@@ -52,12 +53,12 @@ SIZE = "M8";
 // The difference between knobs for screws and nuts is the depth of the hexagonal
 // cutout: nuts are higher than screw heads (see ISO 4017 and ISO 4032)
 // In most cases, handles for nuts are probably suitable (TYPE = "nut"), even for screws
-TYPE = "nut";
+TYPE = "allen";
 
 // "rounded" or "flat"
 // Caution: the rounded top makes a difference of several minutes in rendering time
 // M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
-SHAPE = "rounded";
+SHAPE = "flat";
 
 // number of arms of the star shaped knob (further down referred to as knurls)
 ARMS = 5;
@@ -72,7 +73,7 @@ QUALITY = 12;
  * change to get differently shaped knobs
  *****************************************/
 // order of parameters, names from DIN / ISO tables in (brackets)
-// size, screwDiameter (d1), screwHeadDiameter (e), screwHeadHeight (k)
+// size, screwDiameter (d1), screwHeadDiameter (e), screwHeadHeight (k), allenHeadDiameter (dk), allenHeadHeight (k)
 //
 // note that the screwHewadDiameter is the largest dimension, NOT the wrench size.
 // In DIN and ISO dimension tables, this dimension is usually designated as e.
@@ -80,17 +81,18 @@ QUALITY = 12;
 //    /   \
 //    \___/
 //    --e--
-// dimensions from DIN 933 (ISO 4017)
+// dimensions from DIN 933 / ISO 4017 and DIN 912 / ISO 4762 (inbus / allen)
+// [size, d1, e, k, inbus dk, inbus k]
 screws = [
-    ["M4", 4,  7.66, 2.8],
-    ["M5", 5,  8.79, 3.5],
-    ["M6", 6, 11.05, 4.0],
-    ["M8", 8, 14.38, 5.3]
+    ["M4", 4,  7.66, 2.8,  7.0, 4],
+    ["M5", 5,  8.79, 3.5,  8.5, 5],
+    ["M6", 6, 11.05, 4.0, 10.0, 6],
+    ["M8", 8, 14.38, 5.3, 13.0, 8],
 ];
 
 // order of parameters, names from DIN / ISO tables in (brackets)
 // size, threadDiameter, nutDiameter (e), nutHeight (m)
-// dimensions from DIN 934 (ISO 4032)
+// dimensions from DIN 934 / ISO 4032
 nuts = [
     ["M4", 4,  7.66, 3.2],
     ["M5", 5,  8.79, 4.7],
@@ -114,8 +116,8 @@ edgeRadius = 2;
 protrusion = screw[1];
 
 screwDiameter = screw[1];
-screwHeadDiameter = screw[2];
-screwHeadHeight = screw[3];
+screwHeadDiameter = TYPE == "allen" ? screw[4] : screw[2];
+screwHeadHeight = TYPE == "allen" ? screw[5] : screw[3];
 
 nutDiameter = nut[2];
 nutHeight = nut[3];
@@ -127,7 +129,9 @@ knobDiameter = screwDiameter * 6;
 hubHeight = screwDiameter * 1.5;
 
 // the hub has at least a wall thickness at the nut of the thread's radius
-hubDiameter = TYPE == "hub" ? nutDiameter + screwDiameter : 2 * screwDiameter;
+hubDiameter = TYPE == "allen" || TYPE == "hub"
+    ? nutDiameter + screwDiameter
+    : 2 * screwDiameter;
 
 // perimeter thickness above the screw head if it should be closed
 headPerimeter = 0;
@@ -147,9 +151,9 @@ topRoundingHeight = SHAPE == "flat" ? 0 : knobDiameter / 12;
 totalHeight = protrusion + screwHeadHeight + headPerimeter;
 flatCoreHeight = totalHeight - topRoundingHeight - edgeDiameter;
 
-// knob with lock at the top side
+// configure the knob
 forNut = TYPE == "nut" || TYPE == "nutx";
-makeHub = TYPE == "nut" || TYPE == "screw";
+makeHub = TYPE == "nut" || TYPE == "screw" || TYPE == "allen";
 
 // make the thing
 if (TYPE == "hub") {
@@ -170,15 +174,18 @@ module knob(forNut = false, makeHub = false) {
         // cut hexagonal hole for screw head or nut
         cutHeight = forNut ? nutHeight: screwHeadHeight + headPerimeter;
         cutDiameter = forNut ? nutDiameter : screwHeadDiameter;
+        // for allen screws make a circular cutout
+        // for  hex screws and nuts make a hexagonal cutout
+        edges = TYPE == "allen" ? QUALITY : 6;
         
         translate([0, 0, totalHeight - cutHeight])
-            cylinder(h = cutHeight, d = cutDiameter, $fn = 6);
+            cylinder(h = cutHeight, d = cutDiameter, $fn = edges);
     }
     
     // make a hub
     if (makeHub) {
-        // if the hub is part of the knob the hub must not have a cutout for a nut because it cannot be tightened
-        rotate([180, 0, 0]) hub(nut = false);
+        // if the knob is for allen screws the hub has a cutout for the lock nut
+        rotate([180, 0, 0]) hub(nut = TYPE == "allen");
     }
 }
 
@@ -206,7 +213,6 @@ module knobBody() {
     // radius of the knob's core: distance from center to touch point of knurl and notch
     rCore = sqrt(rPosK^2 + rK^2 - 2 * rPosK * rK * cos(beta));
 
-    
     difference() {
         translate([0, 0, edgeRadius])
         minkowski(4) {
@@ -269,8 +275,9 @@ module hub(nut = false) {
 
         if (nut) {
             // cut off hexagonal hole for the securing nut
-            translate([0, 0, hubHeight - screwHeadHeight])
-                cylinder(h = nutHeight, d = nutDiameter, $fn = 6);
+            // -1 / +1: additional depth for printing tolerances
+            translate([0, 0, hubHeight - nutHeight - 1])
+                cylinder(h = nutHeight + 1, d = nutDiameter, $fn = 6);
         }
     }
 }

@@ -3,6 +3,10 @@
 Allows to create hand operated star shaped knobs for hexagonal screws and nuts.
 The output is widely configurable, see the comments in the `scad` file for details.
 
+## Model on Printables
+
+https://www.printables.com/model/1116311-hex-nut-knobs-parametric-drehknopf-knauf-sechskant
+
 ## 3D printing
 * layer height: 0.2mm
 * infill: 50% (depending on your stability requirements)

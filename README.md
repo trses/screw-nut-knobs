@@ -28,6 +28,10 @@ The screw heads and nuts should be tight and can be pressed in with a vice. In t
 
 Currently I cannot take photos of the knobs I made, will add them later.
 
+## Customization
+
+If you create your own knobs with the OpenSCAD files make sure to use the manifold backend for rendering (Options -> Extended -> 3D Rendering -> Backend -> Manifold). If your version of OpenSCAD doesn't have this option, download the [latest development snapshot](https://openscad.org/downloads.html#snapshots). Otherwise the rendering with CGAL will literally take hours, especially for the knobs with rounded top.
+
 ## 3D Printing
 
 Depending on your quality and stability requirements you can print with a variety of settings. I usually use this configuration:

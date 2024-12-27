@@ -62,15 +62,15 @@ TYPE = "allen";
 // "rounded" or "flat"
 // Caution: the rounded top makes a difference of several minutes in rendering time
 // M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
-SHAPE = "flat";
+SHAPE = "rounded";
 
 // number of arms of the star shaped knob
-ARMS = 5;
+ARMS = 4;
 
 // The higher the better the quality, the higher the computing time
 // 120 gives a very smooth finish, computing time around 7 mins for knobs with rounded
 // top on an M3 CPU
-QUALITY = 12;
+QUALITY = 120;
 
 /*********** END PARAMETERS ***********/
 
@@ -100,7 +100,8 @@ nutDiameter = nut[2];
 nutHeight = nut[3];
 
 // size of the knob, can alternatively be set to a constant value
-knobDiameter = screwDiameter * 6;
+//knobDiameter = screwDiameter * 6;
+knobDiameter = screwDiameter * 7;
 
 // size of the hub
 hubHeight = screwDiameter * 1.5;
@@ -112,9 +113,11 @@ hubDiameter = TYPE == "allen" || TYPE == "hub"
 
 // pitch of the arms: a pitch of one means that one arm radius ist between two arms, a pitch of two means that two arm radii are between two arms. Since the circumference is constant this setting controls the radius of the arms: the larger the pitch, the smaller the arms. Sensible Values are 1, 2, 3
 armPitch = 2;
+
 // ratio of arm diameter to notch diameter
 // 2 means, notches have twice the radius of arms.
 // The higher the notchRatio is, the flatter the notches are. Sensible values are between 2 and 5
+//notchRatio = 4;
 notchRatio = 4;
 
 edgeDiameter = edgeRadius * 2;

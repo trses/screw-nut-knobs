@@ -22,6 +22,7 @@ minkowski() {
 }
 /**/
 
+/*
 sqx = knobPoints(ARMS, kd);
 
 // https://stackoverflow.com/questions/4876065/is-there-an-easy-and-fast-way-of-checking-if-a-polygon-is-self-intersecting
@@ -33,11 +34,11 @@ polygon(sqx);
 x = offsetPoly(sqx, -1.73);
 
 translate([0, 0, -5]) color("red") polygon(x);
-
+*/
 //echo(x);
 
 difference() {
-//    test1();
+    test4();
 //    cube(30);
 }
 
@@ -79,14 +80,15 @@ module test4() {
     ];
 
     // Anzahl Schichten Rundung
-    layers = 2;
+    layers = 5;
 
     // Schichten der Rundung
     // Beginn bei 1 weil Schicht 0 der Rundung bereits in pc ist
     ptsm = [
         for (a = [1: 1: layers - 1])
             let (angle = 90 / (layers - 1) * a)
-            let (kp = knobPoints(ARMS, kd - (re * 2) + re * 2 * cos(angle)))
+            let (kpo = knobPoints(ARMS, kd - (re * 2) + re * 2 * cos(angle)))
+            let (kp = offsetPoly(knobPoints(ARMS, kd), -re+re * cos(angle)))
             for (b = [0: 1: len(kp) - 1])
 
             [kp[b].x, kp[b].y, pc[b].z + re * sin(angle)]
@@ -221,7 +223,7 @@ function knobPoints(arms, diameter) =
 
     let (rKnob = diameter / 2)
     // armPitch
-    let (ap = 4)
+    let (ap = 2)
     // notchRatio
     let (nr = 4)
 

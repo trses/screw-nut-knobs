@@ -1,6 +1,6 @@
 
 
-ARMS = 5;
+ARMS = 3;
 
 // knobDiameter
 kd = 40;
@@ -22,9 +22,22 @@ minkowski() {
 }
 /**/
 
+sqx = knobPoints(ARMS, kd);
+
+// https://stackoverflow.com/questions/4876065/is-there-an-easy-and-fast-way-of-checking-if-a-polygon-is-self-intersecting
+// https://www.webcitation.org/6ahkPQIsN
+// https://github.com/rowanwins/shamos-hoey
+
+polygon(sqx);
+
+x = offsetPoly(sqx, -1.73);
+
+translate([0, 0, -5]) color("red") polygon(x);
+
+//echo(x);
 
 difference() {
-    test4();
+//    test1();
 //    cube(30);
 }
 
@@ -44,9 +57,7 @@ module test4() {
     re = 2;
 
     kb = knobPoints(ARMS, kd);
-    
-    echo (kb);
-    
+
     n = len(kb);
 
     
@@ -174,15 +185,33 @@ module test2() {
 
 
 module test1() {
-union() {
-linear_extrude(10) polygon(knobPoints(ARMS, 40));
 
-for (angle = [0: 5: 89]) {
-    translate ([0, 0, 10 + 5 * sin(angle)])
-        linear_extrude(0.1)
-            polygon(knobPoints(ARMS, 40 * cos(angle)));
-}
-}
+    pts = knobPoints(ARMS, 40);
+
+//    linear_extrude(height = 10, scale = 0.8) polygon(pts);
+
+/*    
+    translate([0, 0, 5])
+        offset(r = -2)
+            polygon(pts);
+/*
+    
+    projection(cut = false) translate([0, 0, 10]) linear_extrude(12) offset(r = -1) polygon(pts);
+/**/
+    for (angle = [0: 5: 89]) {
+        translate ([0, 0, 2 * sin(angle)])
+            linear_extrude(0.2)
+                offset(r = -(2 - 2 * cos(angle)))
+                    polygon(pts);
+    }
+
+/*
+    for (angle = [0: 5: 89]) {
+        translate ([0, 0, 10 + 5 * sin(angle)])
+            linear_extrude(0.1)
+                polygon(knobPoints(ARMS, 40 * cos(angle)));
+    }
+/**/
 }
 
 
@@ -192,7 +221,7 @@ function knobPoints(arms, diameter) =
 
     let (rKnob = diameter / 2)
     // armPitch
-    let (ap = 2)
+    let (ap = 4)
     // notchRatio
     let (nr = 4)
 
@@ -225,27 +254,36 @@ function knobPoints(arms, diameter) =
     // angle of one arm: tip and notch
     let (angleStep = 360 / arms)
     
-    
+ // Länge des Bogens auf dem Umfang
+// arms * (Bogen arm + Bogen notch)
+// Winkel Bogen arm:  2 * (PI - beta)
+// Winkel Bogen notch: 2 * gamma
+// Bogen arcArm = degToRad(2 * (180 - beta)) * rK
+// Bogen arcNotch = degToRad(2 * gamma) * rN
+// Schritte pro segment: 360 / arms
+// Anteil Arm: armShare = arcArm / (arcArm + arcNotch)
+// Schritte pro Arm: armSteps = 360 / arms * armShare
+// Schritte pro Notch: notchSteps = 360 / arms - armSteps
+   
+    let (quality = 360) // steps along outline
+   
     let (arcArmMM = degToRad(2 * (180 - beta)) * rK)
 
     let (arcNotchMM = degToRad(2 * gamma) * rN)
     
     let (armShare = arcArmMM / (arcArmMM + arcNotchMM))
 
-    let (armSteps = round(360 / arms * armShare))
+    let (armSteps = round(quality / arms * armShare))
     
     let (armAngleStep = 2 * (180 - beta) / armSteps)
     
-    let (notchSteps = 360 / arms - armSteps)
+    let (notchSteps = quality / arms - armSteps)
     
     let (notchAngleStep = 2 * gamma / notchSteps)
 
-    let (abc = echo(180 - beta, gamma, armAngleStep, notchAngleStep))
-
-/**/
-
 // über alle Arme
-[for (phi = [0: angleStep: ARMS * angleStep - 1])
+[
+for (phi = [0: angleStep: ARMS * angleStep - 1])
     let (armX = rPosK * cos(phi))
     let (armY = rPosK * sin(phi))
 
@@ -269,48 +307,44 @@ function knobPoints(arms, diameter) =
             let (phi2 = notchStartAngle - i * notchAngleStep)
             
             [notchX + rN * cos(phi2), notchY + rN * sin(phi2)]]
-    )];
-/*
-[
-for (phi = [0: 1: 359])
-    let (arm = floor(phi / angleStep))
-    let (phiTemp = phi - (arm * angleStep))
-    // only half of an arm is uniquely defined, the rest can be determined
-    // by rotation and mirroring
-    let (phiNorm = phiTemp > angleStep / 2
-            ? angleStep - phiTemp
-            : phiTemp)
-    let (rx = abs(phiNorm) < 1e-6
-        ? rKnob
-        : abs(phiNorm - angleStep / 2) < 1e-6
-            ? rPosN - rN
-            : phiNorm < alphaC
-                ?
-                let (gamma2 = asin(rPosK * sin(phiNorm) / rK))
-                let (beta2 = 180 - phiNorm - gamma2)
-                rK * sin(beta2) / sin(phiNorm)
-                :
-                let (delta = alpha - phiNorm)
-                let (epsilon = 180 - asin(rPosN * sin(delta) / rN))
-                let (rho = 180 - delta - epsilon)
-                rN * sin(rho) / sin(delta)
     )
-
-    [rx * cos(phi), rx * sin(phi)]
 ];
-/**/
 
-// Länge des Bogens auf dem Umfang
-// arms * (Bogen arm + Bogen notch)
-// Winkel Bogen arm:  2 * (PI - beta)
-// Winkel Bogen notch: 2 * gamma
-// Bogen arcArm = degToRad(2 * (180 - beta)) * rK
-// Bogen arcNotch = degToRad(2 * gamma) * rN
-// Schritte pro segment: 360 / arms
-// Anteil Arm: armShare = arcArm / (arcArm + arcNotch)
-// Schritte pro Arm: armSteps = 360 / arms * armShare
-// Schritte pro Notch: notchSteps = 360 / arms - armSteps
+function offsetPoly(points, offset) =
+let (n = len(points))
+[
+for (i = [0: 1: n - 1])
+    // previous point
+    let (pp = points[(i - 1 + n) % n])
+    
+    // this point
+    let (p = points[i])
+    
+    // next point
+    let (pn = points[(i + 1) % n])
+    
+    // vector from previous to this point
+    let (va = p - pp)
+    
+    // vector from this to next point
+    let (vb = pn - p)
+    
+    // normalized normal of va
+    let (na = [va.y, -va.x] / norm([va.y, -va.x]))
+    
+    // normalized normal of vb
+    let (nb = [vb.y, -vb.x] / norm([vb.y, -vb.x]))
+    
+    // normalized bisector of the normals
+    let (bis = (na + nb) / norm(na + nb))
+    
+    // distance from vertex along bisector
+    // see https://stackoverflow.com/a/54042831
+    let (l = offset / sqrt((1 + na * nb) / 2))
 
+    // offset point
+    p + l * bis
+];
 
 function degToRad(degrees) = degrees * PI / 180;
 

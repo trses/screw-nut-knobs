@@ -42,10 +42,11 @@ include <measures.scad>;
  * - rendering quality
  *****************************************/
 
+/* [Parameters:] */
 // size of the metric screw or nut
-SIZE = "M8";
+SIZE = "M6"; // [M4, M5, M6, M8]
 
-// type to be rendered, possible values:
+// TYPE possible values:
 // - nut: make a knob with hub for a nut
 // - nutx: make a knob without hub for a nut
 // - allen: make a knob with hub for an Allen screw with lock nut in the hub
@@ -57,20 +58,20 @@ SIZE = "M8";
 // The difference between knobs for screws and nuts is the depth of the hexagonal
 // cutout: nuts are higher than screw heads (see ISO 4017 and ISO 4032)
 // In most cases, handles for nuts are probably suitable (TYPE = "nut"), even for screws
-TYPE = "allen";
+// type of knob to be rendered
+TYPE = "allen"; // [nut, allen, screw, hub, nutx, screwx]
 
-// "rounded" or "flat"
 // Caution: the rounded top makes a difference of several minutes in rendering time
 // M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
-SHAPE = "rounded";
+// shape of the top surface (rounded is very slow, up to several minutes)
+SHAPE = "flat"; // [flat, rounded]
 
 // number of arms of the star shaped knob
-ARMS = 4;
+ARMS = 5;
 
+// 120 gives a very smooth finish, computing time around 7 mins for knobs with rounded top on an M3 CPU
 // The higher the better the quality, the higher the computing time
-// 120 gives a very smooth finish, computing time around 7 mins for knobs with rounded
-// top on an M3 CPU
-QUALITY = 120;
+QUALITY = 18; // [18 : 120]
 
 /*********** END PARAMETERS ***********/
 
@@ -78,6 +79,8 @@ QUALITY = 120;
  * START CALCULATED VALUES
  * change to get differently shaped knobs
  *****************************************/
+
+ /* [Hidden] */
 
 // get the measures from measures.scad
 screw = selectScrew(SIZE);
@@ -136,7 +139,7 @@ makeHub = TYPE == "nut" || TYPE == "screw" || TYPE == "allen";
 if (TYPE == "hub") {
     hub(nut = true, slot = true);
 } else {
-    knob(forNut, makeHub);
+    translate([0, 0, 0]) knob(forNut, makeHub);
 }
 
 module knob(forNut = false, makeHub = false) {

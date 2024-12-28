@@ -29,9 +29,6 @@
  * Contact: mail@thomas-richter.info
  */
 
-// the measures from DIN / ISO tables
-include <measures.scad>;
-
 /*****************************************
  * START PARAMETERS
  * change for 
@@ -44,7 +41,7 @@ include <measures.scad>;
 
 /* [Parameters:] */
 // size of the metric screw or nut or free: if you select "free" customize the detailed values in the Dimensions Tab
-SIZE = "M6"; // [M4, M5, M6, M8, free]
+SIZE = "M8"; // [M4, M5, M6, M8, free]
 
 // TYPE possible values:
 // - nut: make a knob with hub for a nut
@@ -64,7 +61,7 @@ TYPE = "allen"; // [nut, allen, screw, hub, nutx, screwx]
 // Caution: the rounded top makes a difference of several minutes in rendering time
 // M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
 // shape of the top surface (rounded is very slow, up to several minutes)
-SHAPE = "flat"; // [flat, rounded]
+SHAPE = "flat"; // [flat: flat, rounded: rounded - very slow]
 
 // number of arms
 ARMS = 5;
@@ -74,23 +71,25 @@ DIAMETER_RATIO = 7; // [5 : 10]
 
 // 120 gives a very smooth finish, computing time around 7 mins for knobs with rounded top on an M3 CPU
 // The higher the better the quality, the higher the computing time
-QUALITY = 18; // [18 : 120]
+QUALITY = 36; // [18 : 120]
 
 // The values in the Dimensions tab have only to be customized if you choose the SIZE value "free"
 /* [Dimensions:] */
-THREAD_DIAMETER = 1;
+THREAD_DIAMETER = 8.0; // .01
 
-HEX_SCREW_HEAD_DIAMETER_ACROSS_CORNERS = 1.0; // .01
+// Attention! This NOT the wrench size but the diameter of the head measured across the corners
+HEX_SCREW_HEAD_DIAMETER_ACROSS_CORNERS = 14.38; // .01
 
-HEX_SCREW_HEAD_HEIGHT = 1.0; // .01
+HEX_SCREW_HEAD_HEIGHT = 5.3; // .01
 
-ALLEN_HEAD_DIAMETER = 1.0; // .01
+ALLEN_HEAD_DIAMETER = 13.0; // .01
 
-ALLEN_HEAD_HEIGHT = 1.0; // .01
+ALLEN_HEAD_HEIGHT = 8.0; // .01
 
-HEX_NUT_DIAMETER_ACROSS_CORNERS = 1.0; // .01
+// Attention! This NOT the wrench size but the diameter of the nut measured across the corners
+HEX_NUT_DIAMETER_ACROSS_CORNERS = 14.38; // .01
 
-HEX_NUT_HEIGHT = 1.0; // .01
+HEX_NUT_HEIGHT = 6.8; // .01
 
 /*********** END PARAMETERS ***********/
 
@@ -100,27 +99,75 @@ HEX_NUT_HEIGHT = 1.0; // .01
  *****************************************/
 
  /* [Hidden] */
+ 
+ /**
+ * Measures of metric screws and nuts accoring to
+ * ISO 4017 / DIN 933 - hexagonal head screws
+ * ISO 4032 / DIN 934 - hexagonal nuts
+ * ISO 4762 / DIN 921 - Allen screws
+ *
+ * License: CC BY-NC-SA 4.0
+ *          Creative Commons 4.0 Attribution — Noncommercial — Share Alike
+ *          https://creativecommons.org/licenses/by-nc-sa/4.0/
+ *
+ * Author: Thomas Richter
+ * Contact: mail@thomas-richter.info
+ */
 
-// get the measures from measures.scad
+// order of parameters, names from DIN / ISO tables in (brackets)
+// size, screwDiameter (d1), screwHeadDiameter (e), screwHeadHeight (k), allenHeadDiameter (dk), allenHeadHeight (k)
+//
+// note that the screwHewadDiameter is the largest dimension, NOT the wrench size.
+// In DIN and ISO dimension tables, this dimension is usually designated as e.
+//     ___
+//    /   \
+//    \___/
+//    --e--
+// dimensions from DIN 933 / ISO 4017 and DIN 912 / ISO 4762 (inbus / allen)
+// [size, d1, e, k, inbus dk, inbus k]
+screws = [
+    ["M4", 4,  7.66, 2.8,  7.0, 4],
+    ["M5", 5,  8.79, 3.5,  8.5, 5],
+    ["M6", 6, 11.05, 4.0, 10.0, 6],
+    ["M8", 8, 14.38, 5.3, 13.0, 8],
+    // US dimensions according to ASME B18.2.1, ASME B18.2.2 
+    // name, thread size, head diameter across corners (e), head height (h), allen head diameter, allen head height]
+    // ["5/32"]
+    // ["3/16"]
+    // ["1/4",  1/4, 0.505, 5/32, 3/8, 1/4]
+    // ["5/16", 5/16, 0.577, 7/32]
+];
+
+// order of parameters, names from DIN / ISO tables in (brackets)
+// size, threadDiameter, nutDiameter (e), nutHeight (m)
+// dimensions from DIN 934 / ISO 4032
+nuts = [
+    ["M4", 4,  7.66, 3.2],
+    ["M5", 5,  8.79, 4.7],
+    ["M6", 6, 11.05, 5.2],
+    ["M8", 8, 14.38, 6.8],
+];
+
+// get the measures from measures.scad or from the Customizer view
 screw = SIZE != "free"
-        ? selectScrew(SIZE)
-        : [
-            "free",
-            THREAD_DIAMETER,
-            HEX_SCREW_HEAD_DIAMETER_ACROSS_CORNERS,
-            HEX_SCREW_HEAD_HEIGHT,
-            ALLEN_HEAD_DIAMETER,
-            ALLEN_HEAD_HEIGHT
-        ];
+    ? selectScrew(SIZE)
+    : [
+        "free",
+        THREAD_DIAMETER,
+        HEX_SCREW_HEAD_DIAMETER_ACROSS_CORNERS,
+        HEX_SCREW_HEAD_HEIGHT,
+        ALLEN_HEAD_DIAMETER,
+        ALLEN_HEAD_HEIGHT
+    ];
 
 nut = SIZE != "free"
-        ? selectNut(SIZE)
-        : [
-            "free",
-            THREAD_DIAMETER,
-            HEX_NUT_DIAMETER_ACROSS_CORNERS,
-            HEX_NUT_HEIGHT,
-        ];
+    ? selectNut(SIZE)
+    : [
+        "free",
+        THREAD_DIAMETER,
+        HEX_NUT_DIAMETER_ACROSS_CORNERS,
+        HEX_NUT_HEIGHT,
+    ];
 
 // smoothness of the knob's edges. The hub's radius is half of this size to
 // compensate for oversized holes in the part this knob is screwed to
@@ -313,3 +360,10 @@ module hollowSphere(outerRadius, innerRadius) {
         sphere(innerRadius);
     }
 }
+
+// selector functions to simplify the selection of the entities
+function selectFromDict(item, dict) = dict[search([item], dict)[0]];
+
+function selectScrew(size) = selectFromDict(size, screws);
+
+function selectNut(size) = selectFromDict(size, nuts);

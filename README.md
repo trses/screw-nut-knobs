@@ -27,6 +27,7 @@ I have made versions with 5 and 7 arms for the sizes M4, M5, M6, M8. The measure
 The screw heads and nuts should be tight and can be pressed in with a vice. In the version with Allen screw, the lock nut can be pulled into the spacer by tightening the screw with the Allen key. Depending on the horizontal expansion of your printer you might either consider this in your slicer or change the arrays named `screws` and `nuts` in the OpenSCAD file accordingly. On the MK4 I don't compensate for horizontal expansion and get a nice tight fit.
 
 ## Customization
+You can use the Customizer view in OpenSCAD (Window -> Customizer) to create your own knobs. You can also modify further variables in the source code to fit your needs.
 
 If you create your own knobs with the OpenSCAD files make sure to use the manifold backend for rendering (Options -> Extended -> 3D Rendering -> Backend -> Manifold). If your version of OpenSCAD doesn't have this option, download the [latest development snapshot](https://openscad.org/downloads.html#snapshots). Otherwise the rendering with CGAL will literally take hours, especially for the knobs with rounded top.
 

@@ -66,8 +66,11 @@ TYPE = "allen"; // [nut, allen, screw, hub, nutx, screwx]
 // shape of the top surface (rounded is very slow, up to several minutes)
 SHAPE = "flat"; // [flat, rounded]
 
-// number of arms of the star shaped knob
+// number of arms
 ARMS = 5;
+
+// Diameter of the knob in relation to the screw diameter
+DIAMETER_RATIO = 7; // [5 : 10]
 
 // 120 gives a very smooth finish, computing time around 7 mins for knobs with rounded top on an M3 CPU
 // The higher the better the quality, the higher the computing time
@@ -103,8 +106,7 @@ nutDiameter = nut[2];
 nutHeight = nut[3];
 
 // size of the knob, can alternatively be set to a constant value
-//knobDiameter = screwDiameter * 6;
-knobDiameter = screwDiameter * 7;
+knobDiameter = screwDiameter * DIAMETER_RATIO;
 
 // size of the hub
 hubHeight = screwDiameter * 1.5;

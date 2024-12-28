@@ -28,6 +28,14 @@ screws = [
     ["M5", 5,  8.79, 3.5,  8.5, 5],
     ["M6", 6, 11.05, 4.0, 10.0, 6],
     ["M8", 8, 14.38, 5.3, 13.0, 8],
+    // US dimensions according to ASME B18.2.1, ASME B18.2.2 
+    // name, thread size, head diameter across corners (e), head height (h), allen head diameter, allen head height]
+    // ["5/32"]
+    // ["3/16"]
+    // ["1/4",  1/4, 0.505, 5/32, 3/8, 1/4]
+    // ["5/16", 5/16, 0.577, 7/32]
+    ["free", 1, 1, 1, 1, 1],
+
 ];
 
 // order of parameters, names from DIN / ISO tables in (brackets)
@@ -37,7 +45,8 @@ nuts = [
     ["M4", 4,  7.66, 3.2],
     ["M5", 5,  8.79, 4.7],
     ["M6", 6, 11.05, 5.2],
-    ["M8", 8, 14.38, 6.8]
+    ["M8", 8, 14.38, 6.8],
+    ["free", 1, 1, 1],
 ];
 
 // selector functions to simplify the selection of the entities

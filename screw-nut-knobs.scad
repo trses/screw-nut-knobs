@@ -43,8 +43,8 @@ include <measures.scad>;
  *****************************************/
 
 /* [Parameters:] */
-// size of the metric screw or nut
-SIZE = "M6"; // [M4, M5, M6, M8]
+// size of the metric screw or nut or free: if you select "free" customize the detailed values in the Dimensions Tab
+SIZE = "M6"; // [M4, M5, M6, M8, free]
 
 // TYPE possible values:
 // - nut: make a knob with hub for a nut
@@ -76,6 +76,22 @@ DIAMETER_RATIO = 7; // [5 : 10]
 // The higher the better the quality, the higher the computing time
 QUALITY = 18; // [18 : 120]
 
+// The values in the Dimensions tab have only to be customized if you choose the SIZE value "free"
+/* [Dimensions:] */
+THREAD_DIAMETER = 1;
+
+HEX_SCREW_HEAD_DIAMETER_ACROSS_CORNERS = 1.0; // .01
+
+HEX_SCREW_HEAD_HEIGHT = 1.0; // .01
+
+ALLEN_HEAD_DIAMETER = 1.0; // .01
+
+ALLEN_HEAD_HEIGHT = 1.0; // .01
+
+HEX_NUT_DIAMETER_ACROSS_CORNERS = 1.0; // .01
+
+HEX_NUT_HEIGHT = 1.0; // .01
+
 /*********** END PARAMETERS ***********/
 
 /*****************************************
@@ -86,8 +102,25 @@ QUALITY = 18; // [18 : 120]
  /* [Hidden] */
 
 // get the measures from measures.scad
-screw = selectScrew(SIZE);
-nut = selectNut(SIZE);
+screw = SIZE != "free"
+        ? selectScrew(SIZE)
+        : [
+            "free",
+            THREAD_DIAMETER,
+            HEX_SCREW_HEAD_DIAMETER_ACROSS_CORNERS,
+            HEX_SCREW_HEAD_HEIGHT,
+            ALLEN_HEAD_DIAMETER,
+            ALLEN_HEAD_HEIGHT
+        ];
+
+nut = SIZE != "free"
+        ? selectNut(SIZE)
+        : [
+            "free",
+            THREAD_DIAMETER,
+            HEX_NUT_DIAMETER_ACROSS_CORNERS,
+            HEX_NUT_HEIGHT,
+        ];
 
 // smoothness of the knob's edges. The hub's radius is half of this size to
 // compensate for oversized holes in the part this knob is screwed to

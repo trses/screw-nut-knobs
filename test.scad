@@ -1,233 +1,132 @@
 
-
-ARMS = 5;
+// bei zehn ist schluss ohne Kompensation für die offsets (q = 120, ap = 2, nr = 4)
+ARMS = 3;
 
 // knobDiameter
-// test: kd = 40
-kd = 40;
+// test: _knobDiameter = 40
+_knobDiameter = 40;
 
-// Problematik: letzte Schichten ufern aus
-// tests: arms - quality - ap - nr
-// 3 - 24 - 3 - 4
-// 7 - 70 - 3 - 4
+// test: _q = 24
+_q = 24;
 
-// quality muss ein Vielfaches von ARMS * 2 sein damit der Knopf symmetrisch wird
-// test: quality = 30
-// test2: quality = 36 (letzter Punkt im arm ja/nein)
-// test3: 21
-// test4: 54
-q = 360;
-
+// _quality muss ein Vielfaches von ARMS * 2 sein damit der Knopf symmetrisch wird
 // nächstgrößere durch 2 * ARMS teilbare
-nHalf = ARMS * 2;
+_quality = ceil(_q / (ARMS * 2)) * ARMS * 2;
 
-quality = ceil(q / nHalf) * nHalf;
-
-echo("quality", quality);
+echo("quality", _quality);
 
 // armPitch
 // test: 3
-ap = 3;
+// wenn der arm pitch zu hoch wird, werden die letzten Schichten der abgerundeten Kante zu Polygonen mit Intersections und dann stimmen die Indizes der Faces nicht mehr
+// je mehr arme desto früher passiert das
+_armPitch = 3;
 // notchRatio
 // test: 4
-nr = 4;
+_notchRatio = 4;
+
+// Radius der gerundeten Oberfläche
+_topRadius = 40;
+
+// Korrukturhöhe der Rundung
+_heightOffset = _topRadius - 12;
+
+// radius of the rounded edge
+_edgeRadius = 2;
+
+// Anzahl Schichten Rundung
+_edgeLayerCount = floor(_quality / 4);
 
 
-
-
-// difference() {
+//difference() {
     test5();
 //    cube(30);
 //}
 
-module test6() {
-    difference() {
-        cube([40, 40, 30], center = true);
-        translate([0, 0, -28]) #hollowSphere(60, 40);
-    }
-}
-
 module test5() {
-    // Unterschied zu test4: folgt auch für die inneren Radien des gerundeten randes der Rundung der Oberseite. Efekt: es gibt keine Vertiefungen an den Armen
-
     // Aufbau in Schichten
     // erste Schicht liegt in der xy Ebene
     // zweite Schicht mit variablen z Werten
     // weitere Schichten: z-Wert der zweiten Schicht + sin (edgeAngle)
-    
-    // Radius der gerundeten Oberfläche
-    rs = 40;
-    
-    // Korrukturhöhe der Rundung
-    chr = rs - 12;
-    
-    // Radius der abgerundeten Kante
-    re = 2;
 
-    kb = knobPoints(ARMS, kd);
+    kb = knobPoints(ARMS, _knobDiameter);
 
-//    translate(kb[0]) cylinder(h = 15, d = 0.5, $fn = 18);
-    
     n = len(kb);
 
-    // unterste Schicht
-    pb = [
-        for (i = [0: len(kb) - 1])
-        [kb[i].x, kb[i].y, 0]
-    ];
-    
-    // zweite Schicht
-    pc = [
-        for (i = [0: len(kb) - 1])
-            // radius des griffs an der aktuellen stelle
-            // let (rx = norm(kb[i]))
-            // höhe des Mittelpunkts des Kreises der Rundung an der aktuellen stelle
-//            let (hm = sqrt((rs - re) ^ 2 - (rx - re) ^ 2))
-            let (hm = heightAtTop(kb[i], rs) - re)
+    // base layer    
+    bl = baseLayer(kb);
 
-            [kb[i].x, kb[i].y, hm - chr]
-    ];
-
-    // Anzahl Schichten Rundung
-    layers = 9;
-    
-    // Berechne Höhenwete wie für zweite Schicht für jeden neuen Radius
-    // Ziehe echte zweite Schicht von diesen Höhenwerten ab
-    // Addiere die Differenz zum tatsächlichen Wert der Rundung
-    
-    // Schichten der Rundung
-    // Beginn bei 1 weil Schicht 0 der Rundung bereits in pc ist
-    ptsm = [
-        for (a = [1: layers - 1])
-            let (angle = 90 / (layers - 1) * a)
-            
-            // horizontaler Abstand der aktuellen Schicht vom äußersten Rand
-            let (radDist = -re + re * cos(angle))
-
-            // (x, y) - Punkte der aktuellen Schicht
-            let (kpx = offsetPoly(knobPoints(ARMS, kd), radDist))
-            
-            let (kp = polyEliminatedIntersections(kpx))
-
-            // Höhe der Oberseitenrundung der aktuellen Schicht, Berechnung wie für den Z-Wert von pc aber mit den x,y-Positionen der aktuellen Schicht (kp)
-            for (i = [0: len(kp) - 1])
-                // höhe des Mittelpunkts des Kreises der Rundung an der aktuellen stelle
-                // norm(kp[i]) ist der Radius des Griffs an der aktuellen Stelle
-                let (hm = sqrt((rs - re) ^ 2 - (norm(kp[i]) - re) ^ 2))
-                let (zOffset = (hm - chr) - pc[i].z)
-                let (zValue = round((pc[i].z + re * sin(angle) + zOffset) * 10000) / 10000)
-                
-                let (zv = heightAtTop(kp[i], rs) - re + re * sin(angle))
-
-                [kp[i].x, kp[i].y, zv - chr]
-    ];
-
-/*  
-    npx = len(ptsm) / (layers - 1);
-
-    for (i = [npx: 2 * npx - 1]) {
-        pt = ptsm[i];
-        translate(pt) color("cyan") cylinder(h = (i - npx + 1) / 2, d = 0.5, $fn = 18);
-    }
-/**    
-    echo("22", ptsm[22]);
-    echo("28", ptsm[28]);
-/**/
-    // Punkte auf der Rundung
-
-    // erster Ansatz: hier weitere kreisförmige Schichten einbringen, beginnend bei Radius der Notches + radius der agerundeten Kante
-
-    // Anzahl der Punkte in der letzten Schicht
-    npx = len(ptsm) / (layers - 1);
-    lastLayer = partialList(ptsm, len(ptsm) - npx, len(ptsm) - 1);
-    
-    echo(npx, len(ptsm));
-    echo(lastLayer);
-
-/*
-    for (i = [0: len(lastLayer) - 1]) {
-        translate(lastLayer[i]) color("cyan") cylinder(h = i / 2 + 1, d = 0.5, $fn = 18);
-    }
-/**/    
-    // find the point closest to the center
-    projected = [for (i = [0: npx - 1]) [lastLayer[i].x, lastLayer[i].y]];
-
-    dist = norm(projected[closestToCenter(projected)]);
-    
-    steps = floor(dist / 2) - 1;
-    echo("steps", steps, "dist", dist);
-/*
-    for (i = [0: steps - 1]) {
-        kpt = polyEliminatedIntersections(offsetPoly(projected, -2 * (i + 1)));
-        
-        // for each point of the previous layer find the closest of these points
-        closestPoints = [
-            for (j = [0: len(lastLayer) - 1])
-                closestToPoint(kpt, lastLayer[j])
-        ];
-        
-        echo(closestPoints);
-        
-        echo("len kpt", len(kpt));
-        translate([0, 0, 12 + i]) color("cyan") polygon(kpt);
-
-        if (i  > -1) {
-            for (i = [0: len(kpt) - 1]) {
-                translate(kpt[i]) color("red") cylinder(h = i / 3 + 15, d = 0.5, $fn = 18);
-            }
-        }
-    }
-/**/
-
-    ptst = [
-        for (i = [0: steps - 1])
-            // the next outline
-            let (kpt = polyEliminatedIntersections(offsetPoly(projected, -2 * (i + 1))))
-
-            // Höhe der Oberseitenrundung der aktuellen Schicht
-            for (i = [0: len(kpt) - 1])
-                let (h = heightAtTop(kpt[i], rs))
-
-                [ kpt[i].x, kpt[i].y, h - chr]
-    ];
-
-    topLayer = [
+    // Schichten der runden Kante und Hilfsschicht für die obere Rundung
+    layersTemp = edgeLayers(kb);
+    lastLayer = layersTemp[len(layersTemp) - 1];
+    topLayer = [[
         for (i = [0: len(lastLayer) - 1])
             lastLayer[i] + [0, 0, 10]
-    ];
-
-    pts = concat(pb, pc, ptsm, topLayer, [[0, 0, rs - chr + 2]]);
-//    pts = concat(pb, pc, ptsm, ptst);
-/*    
-    for (i = [0: len(ptst) - 1]) {
-        translate(ptst[i] + [0, 0, 0.5]) color("red") cylinder(h = 1, d = 0.5, $fn = 18);
-    }
-/**/
-
-//    #translate([0, 0, -chr]) sphere(rs, $fn = 120);
-
-    echo(heightAtTop([0, 0], rs));
-
-    // for each point of the previous layer find the closest of these points
-    closestPoints = [ for (i = [0: len(lastLayer) - 1]) closestToPoint(ptst, lastLayer[i]) ];
+    ]];
+    
+    layers = concat(layersTemp, topLayer);
+    
+    points = concat(bl[0], flattenInnerList(layers));
+    
+    echo("len(points)", len(points));
     
     faces = concat (
-        // Unterseite: erste n punkte
-        [[ for (i = [0: n - 1]) i ]],
+        [ bl[1] ],
 
-        // Seitenflächen und gerundete Kante: Vierergruppen über alle Layer - 1
+        // Seitenflächen und gerundete Kante: Vierergruppen über alle Layer
+        // letzte schicht: Prisma nach oben für das Abziehen der Hohlkugel
+        // faces werden von der Schicht unter der aktuellen zu dieser Schicht bestimmt
+        // Achtung! Die Schicht mit der Nummer 0 ist hier nicht die unterste Schicht sondern die zweite Schicht. Deswegen stimmen die Indizes wenn die faces bei der untersten Schicht beginnend aufgebaut werden
         [
-            for (layer = [0: layers])
-                for (i = [layer * n: (layer + 1) * n - 1]) [ i, (i + 1) % n + layer * n, (i + 1) % n + (layer + 1) * n, i + n]
+            for (i = [0: len(layers) - 1])
+                let (abc = echo("i", i))
+            
+                let (count = len(layers[i]))
+                let (countDiff = i == 0 ? 0 : len(layers[i - 1]) - count)
+
+                let (pts =
+                countDiff == 0 ?
+                    // normale Schicht
+                    let (start = firstPointIndex(layers, i))
+                    let (def = echo("normal start", start))
+                    
+                    [for (j = [start: start + count - 1]) [
+                        j,
+                        (j + 1) % n + i * n,
+                        (j + 1) % n + (i + 1) * n,
+                        j + n
+                    ]]
+                    
+                :
+                    // reduzierende Schicht
+                    
+                    // gehe über die Schicht unter(!) dieser weil die Anzahk reduziert ist
+                    let (lowerLayer = layers[i - 1])
+                    let (start = firstPointIndex(layers, i))
+                    let (cnt = len(lowerLayer))
+                    let (closestPoints =
+                        [ for (j = [0: cnt - 1])
+                            closestToPoint(layers[i], layers[i - 1][j]) + start + len(bl[0])
+                        ])
+
+                    let (def = echo("reduced start", start))
+                    [for (j = [start: start + cnt - 1])
+                        let (cp = closestPoints[j - start])
+                        let (next = (j + 1) % cnt + start)
+                        let (cpNext = closestPoints[next - start])
+ 
+                        let (abc = echo("cp", j, cp, next, cpNext))
+
+                        cp == cpNext ? [ j, next, cp ] : [ j, next, cpNext, cp]
+
+                    ]
+                )
+                each pts
         ],
+
 /*
-        // Seitenflächen und gerundete Kante: Vierergruppen über alle Layer - 1
-        [
-            for (layer = [0: layers - 1])
-                for (i = [layer * n: (layer + 1) * n - 1]) [ i, (i + 1) % n + layer * n, (i + 1) % n + (layer + 1) * n, i + n]
-        ],
-/**/
-/*
+    // for each point of the previous layer find the closest of these points
+    closestPoints = [ for (i = [0: len(lastLayer) - 1]) closestToPoint(ptst, lastLayer[i]) ];
+
         // gerundete Schichten auf der Oberseite
         // beginne mit der letzen Schicht der Rundung
         let (start = layers * n)
@@ -241,27 +140,28 @@ module test5() {
                 let (cpNext = closestPoints[next - start] + offset)
                 cp == cpNext ? [ i, next, cp ] : [ i, next, cpNext, cp]
         ],
+
 /**/
         // Oberseite: letzte n punkte reversed
-        [[ for (i = [(layers + 2) * n - 1: -1: (layers + 1) * n]) i ]],
-
-/*
-        // Schicht mit Index layers, layers + 1. Schicht, zum Zentrum
-        // (layers + 1) * n ist der Punkt im Zentrum
-        [ for (i = [0: n - 1]) [(layers + 1) * n, i + layers * n, (i + 1) % n + layers * n]],
-/**/
+        [[ for (i = [(_edgeLayerCount + 2) * n - 1: -1: (_edgeLayerCount + 1) * n]) i ]]
     );
- 
 
- 
-    render() difference() {
-        polyhedron(pts, faces, convexity = 10);
-        
-//        translate([0, 0, 40]) #sphere(30);
-        
-        translate([0, 0, -chr]) hollowSphere(rs + 20, rs, $fn = quality);
+    render() color("gold") difference() {
+        polyhedron(points, faces, convexity = 10);
+//        translate([0, 0, -_heightOffset + 1]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
     }
 }
+
+// for a given layer returns the total index of the first point
+// e. g: layer 0: 24 points, layer 1: 18 points, layer 2: 18 points
+// total index of layer 2 is 42: 24 + 18
+function firstPointIndex(layers, i) = fPI_(layers, 0, i, 0);
+
+// recursive helper for firstPointIndex
+function fPI_(layers, i, target, sum) = 
+
+let (abc = echo("fpi", i, len(layers[i]), sum))
+    i == target ? sum : fPI_(layers, i + 1, target, sum + len(layers[i]));
 
 module hollowSphere(outerRadius, innerRadius) {
     difference() {
@@ -270,148 +170,70 @@ module hollowSphere(outerRadius, innerRadius) {
     }
 }
 
-function heightAtTop(point, radiusTop) =
-    sqrt(radiusTop^2 - norm([point.x, point.y])^2);
-
-module test3() {
-// kurvige oberkante des randes, folgt der Rundung der Oberseite
-    rs = 50;
+// gets a list with points in 2D (only x and y values)
+// returns a list with two sublists: [ points, faces ]
+function baseLayer(points) =
+[
+    // set the height of all points to 0
+    [
+        for (i = [0: len(points) - 1]) [ points[i].x, points[i].y, 0]
+    ],
     
-    re = 2;
+    // the base layer has just one face: all points clockwise
+    [
+        for (i = [0: len(points) - 1]) i,
+    ]
+];
+
+// returns a list with the points of layer layerN in ccw order seen from above
+// points: outmost edge
+function edgeLayer(points, layerN) =
+    // angle of this layer's edge rounding
+    // we have one angle step less than the number of edge layers:
+    // layer 0 is at 0 degrees (horizontal)
+    // layer _edgeLayerCount - 1 is at 90 degrees (vertical)
+    let (angle = 90 / (_edgeLayerCount - 1) * layerN)
     
+    // horizontal distance of the current layer from the outer edge
+    let (horDist = _edgeRadius * (1 - cos(angle)))
 
-    kb = knobPoints(ARMS, 40);
+    // (x, y) - points of the current layer, as offset from the outmost edge
+    let (layerPoints = polyEliminatedIntersections(
+        offsetPoly(points, -horDist))
+    )
     
-    // unterste Schicht
-    pb = [
-        for (i = [0: 1: len(kb) - 1])
-        [kb[i].x, kb[i].y, 0]
-    ];
-    
-    // obere Schicht
-    pc = [
-        for (i = [0: 1: len(kb) - 1])
-            let (rx = sqrt(kb[i].x ^ 2 + kb[i].y ^ 2))
-            let (hm = sqrt((rs - re) ^ 2 - (rx - re) ^ 2))
+    // calculate the heights of the points, depending on the current angle
+    // and the distance of the point from the center
+    [for (i = [0: len(layerPoints) - 1])
+        // height of the point with respect to surface rounding and edge rounding
+        pointHeightEdge(layerPoints[i], angle)
+    ]
+;
 
-            [kb[i].x, kb[i].y, hm - 38]
-    ];
-    pts = concat(pb, pc, [[0, 0, 11]]);
+// generates a list of lists for all edge layers:
+// [ [l0p0, l0p1, ..., l0pn-1], ... [lmp0, lmp1, ..., lmpn-1] ]
+// due to self intersections appearing when offsetting the outline, the layers
+// may have different numbers of points (the higher the less points)
+function edgeLayers(points) =
+[
+    for (i = [0: _edgeLayerCount - 1])            
+         edgeLayer(points, i)
+];
 
-    n = len(kb);
-    
-    faces = concat (
-        // Unterseite: erste n punkte
-        [[ for (i = [0: 1: n - 1]) i ]],
-        // Seitenflächen: Vierergruppen
-        [
-            for (i = [0: 1: n - 1]) [ i, (i + 1) % n, (i + 1) % n + n, i + n]
-        ],
-        // Oberseite: letzte Schicht dreiecke zum zentrum
-        [ for (i = [0: 1: n - 1]) [2 * n, i + n, (i + 1) % n + n] ],
-    );
-    
-        polyhedron(pts, faces);
-}
+// recursive helper for edgeLayers
+function eL_() = 0;
 
+// faces: closestto point nur wenn die layer verschiedene punktanzahlen haben
 
-module test2() {
-    // Test Aufbau in Schichten
-    // funktioniert nur mit Polarwinkel in knobPoints(), nicht mit
-    // äquidistanten Punkten entlang des Umfangs
-    layers = 13;
+function heightAtEdge(p, angle) =
+    heightAtTop(p) - _edgeRadius * (1 - sin(angle));
 
+function pointHeightEdge(p, angle) = [p.x, p.y, heightAtEdge(p, angle)];
 
-    pts = [
-        for (a = [0: 1: layers - 1])
-            let (angle = 90 / (layers - 1) * a)
-            let (kp = knobPoints(ARMS, 35 + 8 * cos(angle)))
-            for (b = [0: 1: len(kp) - 1])
+function heightAtTop(p) =
+    sqrt(_topRadius^2 - norm([p.x, p.y])^2) - _heightOffset;
 
-            [kp[b].x, kp[b].y, 4 * sin(angle)]
-    ];
-
-    n = 36;
-
-    faces = concat (
-        // Unterseite: erste n punkte
-        [[ for (i = [0: 1: n - 1]) i ]],
-        // Seitenflächen: Vierergruppen über alle Layer - 1
-        [
-            for (layer = [0: 1: layers - 2])
-                for (i = [layer * n: 1: (layer + 1) * n - 1]) [ i, (i + 1) % n + layer * n, (i + 1) % n + (layer + 1) * n, i + n]
-        ],
-        // Oberseite: letzte n punkte reversed
-        [[ for (i = [layers * n - 1: -1: (layers - 1) * n]) i ]],
-    );
-
-    polyhedron(pts, faces);
-}
-
-module test1_1() {
-    sqx = knobPoints(ARMS, kd);
-
-    isqx = closestToCenter(sqx);
-
-    translate(sqx[isqx]) color("cyan") cylinder(h = 20, d = 0.5, $fn = 36);
-    translate(sqx[0]) color("blue") cylinder(h = 20, d = 0.5, $fn = 36);
-
-    polygon(sqx);
-
-    // test: -4
-    x = offsetPoly(sqx, -4);
-
-    ix = closestToCenter(x);
-
-    translate(x[ix]) color("cyan") cylinder(h = 20, d = 0.5, $fn = 36);
-    translate(x[0]) color("blue") cylinder(h = 20, d = 0.5, $fn = 36);
-
-    translate([0, 0, 5]) color("red") polygon(x);
-
-//echo(x, len(x));
-
-    m = polyEliminatedIntersections(x);
-
-echo("len poly", len(m));
-
-    translate([0, 0, 10]) color("green") polygon(m);
-
-
-    translate([m[len(m) - 1].x, m[len(m) - 1].y, 0]) color("red") cylinder(h = 20, d = 0.1, $fn = 36);
-}
-
-module test1() {
-    // einzelne Schichten von Polygonen, nicht verbunden
-
-    pts = knobPoints(ARMS, 40);
-
-//    linear_extrude(height = 10, scale = 0.8) polygon(pts);
-
-/*    
-    translate([0, 0, 5])
-        offset(r = -2)
-            polygon(pts);
-/*
-    
-    projection(cut = false) translate([0, 0, 10]) linear_extrude(12) offset(r = -1) polygon(pts);
-/**/
-    for (angle = [0: 5: 89]) {
-        translate ([0, 0, 2 * sin(angle)])
-            linear_extrude(0.2)
-                offset(r = -(2 - 2 * cos(angle)))
-                    polygon(pts);
-    }
-
-/*
-    for (angle = [0: 5: 89]) {
-        translate ([0, 0, 10 + 5 * sin(angle)])
-            linear_extrude(0.1)
-                polygon(knobPoints(ARMS, 40 * cos(angle)));
-    }
-/**/
-}
-
-
+function pointHeightTop(p) = [p.x, p.y, heightAtTop(p)];
 
 // generates points for the outher edge of the knob
 // returns an array [ [x1, y1], [x2, y2] ... [xn, yn] ]
@@ -420,15 +242,15 @@ function knobPoints(arms, diameter) =
     let (rKnob = diameter / 2)
 
     // radius of the arm circles
-    let (rK = PI * rKnob / ((ap + 1) * arms + PI))
+    let (rK = PI * rKnob / ((_armPitch + 1) * ARMS + PI))
     // radius of the notch circles
-    let (rN = nr * rK)
+    let (rN = _notchRatio * rK)
 
     // radius of the circle to place the arms (rbk)
     let (rPosK = rKnob - rK)
 
     // angle between arm and notch (360 / ARMS / 2)
-    let (alpha = 180 / arms)
+    let (alpha = 180 / ARMS)
 
     // angle between center of knob, center of notch, center of arm
     let (gamma = asin(sin(alpha) * rPosK / (rN + rK)))
@@ -446,7 +268,7 @@ function knobPoints(arms, diameter) =
     let (alphaC = asin(rK * sin(beta) / rCore))
 
     // angle of one arm: tip and notch
-    let (angleStep = 360 / arms)
+    let (angleStep = 360 / ARMS)
     
  // Länge des Bogens auf dem Umfang
 // arms * (Bogen arm + Bogen notch)
@@ -465,11 +287,11 @@ function knobPoints(arms, diameter) =
     
     let (armShare = arcArmMM / (arcArmMM + arcNotchMM))
 
-    let (armSteps = round(quality / arms * armShare))
+    let (armSteps = round(_quality / ARMS * armShare))
     
     let (armAngleStep = 2 * (180 - beta) / armSteps)
     
-    let (notchSteps = quality / arms - armSteps)
+    let (notchSteps = _quality / ARMS - armSteps)
     
     let (notchAngleStep = 2 * gamma / notchSteps)
 
@@ -549,7 +371,6 @@ function polyEliminatedIntersections(points) =
         rotateList(result, len(result) - closestTo0)
 ;
 
-/**/
 // finds all points of the first arm that belong to the polygon without intersections
 function polyPointsFirstArm(points) =
     let (firstHalf = concat([points[0]], pPFA_(points, 0, [])))
@@ -605,7 +426,6 @@ function cTP_(points, p, index, min, minIndex) =
         let (i = distance < min || isActuallyZero(delta) ? index : minIndex)
 
         cTP_(points, p, index + 1, m, i);    
-
 
 // offsets a polygon
 function offsetPoly(points, offset) =
@@ -684,3 +504,5 @@ function rotateList(list, n) =
     for (i = [0: count - 1])
         list[(sI + i) % count]
 ];
+
+function flattenInnerList(list) = [for (i = [0: len(list) - 1]) each list[i]];

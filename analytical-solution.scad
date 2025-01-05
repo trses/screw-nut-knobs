@@ -9,6 +9,7 @@ _q = 180;
 // _quality must be a multiple of ARMS * 2 to have the body rotationally symmetrical
 // next larger number divisible by 2 * ARMS
 _quality = ceil(_q / (ARMS * 2)) * ARMS * 2;
+echo("quality", _quality);
 
 // armPitch
 _armPitch = 2;
@@ -29,7 +30,7 @@ _edgeRadius = 2;
 // number of layers of the rounded edge, must at least be two
 // note: layers of points, one larger than the resulting numer of layers of faces
 elTemp = round(_quality * _edgeRadius / _knobDiameter);
-_edgeLayerCount = elTemp >= 2 ? elTemp: 2;
+_edgeLayerCount = elTemp >= 2 ? elTemp : 2;
 
 // make that thing
 render() translate([0, 0, _edgeRadius]) color("gold") knobBody();
@@ -38,7 +39,7 @@ EPSILON = 1e-10;
 
 // creates the body
 module knobBody() {
-    // built in layers parallel to the xy plane
+    // built out of layers basically parallel to the xy plane
 
     // 2D (x, y) points along the outer limit, ccw seen from above
     kb = limitPoints(ARMS, _knobDiameter);
@@ -46,7 +47,8 @@ module knobBody() {
     // layers of the bottom rounded edge
     bottomEdgeLayers = bottomEdgeLayers(kb);
 
-    // layers of the top rounded edge plus a copy of the last layer to allow for subtracting a hollow sphere to make the rounding
+    // layers of the top rounded edge plus an elevated copy of the last
+    // layer to allow for subtracting a hollow sphere to make the rounding
     // TODO: make the rounding by creating layers
     layersTemp = edgeLayers(kb);
     lastLayer = layersTemp[len(layersTemp) - 1];
@@ -64,9 +66,12 @@ module knobBody() {
     // create the faces from bottom to top in three steps:
     // one face defined by the bottom layer
     // n faces defined by following layers
-    // on face defined by the top layer
+    // one face defined by the top layer
     // TODO: split into functions
-    // TODO: top / bottom layers with less than three points are not handled yet (towards a general solution). The basic principle is already implemented, we probably just neet to test for the number of points in the first and last layer and adjust the loops accordingly
+    // TODO: top / bottom layers with less than three points are not handled yet
+    // (towards a general solution). The basic principle is already implemented,
+    // we probably just need to test for the number of points in the first and last
+    // layer and adjust the loops accordingly
     faces = concat (
         // bottom face: points of the first layer ccw
         // double square brackets: concat unfolds for whatever reason
@@ -74,7 +79,7 @@ module knobBody() {
 
         // layers of the sides along the z axis
         [
-            // -2: there is one layer of side faces less than points
+            // -2: there is one layer of side faces less than layers of points
             for (i = [0: len(layers) - 2])
                 let (count = len(layers[i]))
                 
@@ -86,7 +91,8 @@ module knobBody() {
                 let (pts =
                 countDiff == 0 ?
                     // layers have the same number of points, make squares
-                    // TODO: towards a general solution: if the layers are twisted against each other this step might utilize the closestToPoint function
+                    // TODO: towards a general solution: if the layers are twisted 
+                    // against each other this step might utilize the closestToPoint function
                     // make a square, go ccw from the bottom left point
                     [for (j = [start: start + count - 1]) [
                         j,
@@ -98,13 +104,17 @@ module knobBody() {
                 let (nextLayer = layers[i + 1])
                 countDiff < 0 ?
                     // layer has more points than the layer above
-                    // for every point of this layer find the closest point in the layer above, easier than messing around with indizes of deleted points and a more general solution
+                    // for every point of this layer find the closest point in the layer 
+                    // above, easier than messing around with indizes of deleted points 
+                    // and a more general solution
                     let (closestPoints =
                         [ for (j = [0: count - 1])
                             closestToPoint(nextLayer, layers[i][j]) + start + count
                         ])
 
-                    // make a square ccw if for two neighboring points of this layer the closest points in the layer above are different, make a triangle otherwise
+                    // make a square ccw if for two neighboring points of this layer the 
+                    // closest points in the layer above are different, make a triangle 
+                    // otherwise
                     [for (j = [start: start + count - 1])
                         let (cp = closestPoints[j - start])
                         let (next = (j - start + 1) % count + start)
@@ -116,7 +126,8 @@ module knobBody() {
                     ]
                 :
                     // layer has fewer points than the layer above
-                    // use the same procedure as before but go along the layer above instead of along this layer
+                    // use the same procedure as before but go along the layer above 
+                    // instead of along this layer
                     let (countNext = len(nextLayer))
                     let (closestPoints =
                         [ for (j = [0: countNext - 1])
@@ -128,7 +139,9 @@ module knobBody() {
                         let (cp = closestPoints[j - startNext])
                         let (next = (j - startNext + 1) % countNext + startNext)
                         let (cpNext = closestPoints[next - startNext])
-                        cp == cpNext ? [ j, next, cp ] : [ j, next, cpNext, cp]
+                        cp == cpNext
+                            ? [ j, next, cp ]
+                            : [ j, next, cpNext, cp]
                     ]
                 )
                 // flatten the list
@@ -140,7 +153,8 @@ module knobBody() {
         [[ for (i = [end: -1: start]) i ]]
     );
 
-    // create a polyhedron with a prism-shaped extension at the top and subtract a hollow sphere from it
+    // create a polyhedron with a prism-shaped extension at the top and subtract a 
+    // hollow sphere from it
     // TODO: calculate the thickness of the hollow sphere based on the knob's size
     difference() {
         polyhedron(points, faces, convexity = 10);
@@ -225,7 +239,9 @@ for (phi = [0: angleStep: ARMS * angleStep - 1])
 
     let (notchStartAngle = phi + angleStep / 2 + 180 + gamma)
 
-    // note checkAndSetToZero: when ofsetting the outer edge we occasionally check if a point is on the x axis, thus the y value is set to zero if it is very likely actually zero but differs due to floating point errors
+    // note checkAndSetToZero: when ofsetting the outer edge we occasionally check if a 
+    // point is on the x axis, thus the y value is set to zero if it is very likely 
+    // actually zero but differs due to floating point errors
     each concat(
         // loop over the arm
         [for (i = [0: 1: armSteps - 1])
@@ -350,6 +366,19 @@ module hollowSphere(outerRadius, innerRadius) {
 // eliminates the intersections from the given polygon
 // ATTENTION! This function is designed to be fast on the rotationally
 // symmetric geometry of the knobs. It does not work for the general case.
+// the idea is to find the closest point to the center and use this as
+// starting point. Due to the rotational symmetry of the knob there are
+// several closest points (one or two per notch). We furthermore know that
+// the first arm is mirrored on the x-axis. So we use that starting point
+// which is the last one before the first arm starts. The first arm starts
+// at index 0, so the closest point we want to use is the one with the highest
+// index. From that starting point we check the edges of the polygon towards
+// the x-axis. We either find (i) an edge crossing the x-axis or (ii) a point
+// laying on the x-axis (having a 0 y value).
+// Either of these points (the intersection with the x-axis or the regular
+// point on the x-axis) mark the last point we might take.
+// These points are first mirrored at the x-axis to have a full arm and then
+// rotated around the z-axis arm times to make the full outer limit of the knob.
 function polyEliminatedIntersections(points) = 
 
     // we need to check only one arm, the remainder is symmetric
@@ -366,9 +395,11 @@ function polyEliminatedIntersections(points) =
     // the x-axis
     let (lastIndex = points[(startIndex + n / 2) % len(points)].y == 0 ? n / 2 : n / 2 - 1)
     
+    // make the list of the points that need to be checked for intersections
     let (pts = [for (i = [0: 1: lastIndex])
         points[(startIndex + i) % len(points)]]
     )
+    // get the points of the first arm
     let (ppfa = polyPointsFirstArm(pts))
     
     let (result = [
@@ -391,7 +422,8 @@ function polyPointsFirstArm(points) =
     let (firstHalf = concat([points[0]], pPFA_(points, 0, [])))
     
     // mirror the first half
-    // don't mirror the first point if it ends on the x-axis after being rotated by 360 / ARMS / 2 degrees
+    // don't mirror the first point if it ends on the x-axis after being
+    // rotated by 360 / ARMS / 2 degrees
     let (firstPointRot = rotatePointAroundZAxis(firstHalf[0], 360 / ARMS / 2))
     let (sIndex = isActuallyZero(firstPointRot.y) ? 1 : 0)
 
@@ -417,7 +449,8 @@ i == len(points) - 1
         // line (p1, p2) belongs to the poly, add the second point and go on
         ? pPFA_(points, i + 1, concat(result, [p2]))
         // the second point is on the other side of the x-axis,
-        // we add the intersection of the line (p1, p2) with the x-axis to the result and leave
+        // we add the intersection of the line (p1, p2) with the x-axis to the result 
+        // and leave
         : concat(result, [[ p1.x - p1.y * (p2.x - p1.x) / (p2.y - p1.y), 0]])
 ;
 

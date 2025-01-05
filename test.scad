@@ -1,5 +1,3 @@
-
-// bei zehn ist schluss ohne Kompensation für die offsets (q = 120, ap = 2, nr = 4)
 ARMS = 3;
 
 // knobDiameter
@@ -19,8 +17,9 @@ echo("quality", _quality);
 // test: 3
 // wenn der arm pitch zu hoch wird, werden die letzten Schichten der abgerundeten Kante zu Polygonen mit Intersections und dann stimmen die Indizes der Faces nicht mehr
 // je mehr arme desto früher passiert das
+//_armPitch = 3.3;
 _armPitch = 3;
-// notchRatio
+// notchRati2
 // test: 4
 _notchRatio = 4;
 
@@ -34,7 +33,9 @@ _heightOffset = _topRadius - 12;
 _edgeRadius = 2;
 
 // Anzahl Schichten Rundung
-_edgeLayerCount = floor(_quality / 4);
+elTemp = round(_quality * _edgeRadius / _knobDiameter);
+_edgeLayerCount = elTemp >= 2 ? elTemp: 2;
+echo("_edgeLayerCount", _edgeLayerCount);
 
 
 //difference() {
@@ -63,92 +64,69 @@ module test5() {
             lastLayer[i] + [0, 0, 10]
     ]];
     
-    layers = concat(layersTemp, topLayer);
+    layers = concat([ bl[0] ], layersTemp, topLayer);
     
-    points = concat(bl[0], flattenInnerList(layers));
+    points = flattenInnerList(layers);
     
-    echo("len(points)", len(points));
-    
+echo("len points", len(points));
+
+//echo(layers[len(layers) - 2]);
+//echo(layers[len(layers) - 1]);
+
     faces = concat (
         [ bl[1] ],
 
         // Seitenflächen und gerundete Kante: Vierergruppen über alle Layer
         // letzte schicht: Prisma nach oben für das Abziehen der Hohlkugel
-        // faces werden von der Schicht unter der aktuellen zu dieser Schicht bestimmt
-        // Achtung! Die Schicht mit der Nummer 0 ist hier nicht die unterste Schicht sondern die zweite Schicht. Deswegen stimmen die Indizes wenn die faces bei der untersten Schicht beginnend aufgebaut werden
         [
-            for (i = [0: len(layers) - 1])
-                let (abc = echo("i", i))
-            
+            for (i = [0: len(layers) - 2])            
                 let (count = len(layers[i]))
-                let (countDiff = i == 0 ? 0 : len(layers[i - 1]) - count)
+                
+                // check if the next layer has the same number of points
+                let (countDiff = len(layers[i + 1]) - count)
 
+                let (start = firstPointIndex(layers, i))
+//let (abc = echo("i", i, "count", count, "countdiff", countDiff, "start", start))
+                
                 let (pts =
                 countDiff == 0 ?
-                    // normale Schicht
-                    let (start = firstPointIndex(layers, i))
-                    let (def = echo("normal start", start))
-                    
+                    // normale Schicht                    
                     [for (j = [start: start + count - 1]) [
                         j,
-                        (j + 1) % n + i * n,
-                        (j + 1) % n + (i + 1) * n,
-                        j + n
+                        (j - start + 1) % count + start,
+                        (j - start + 1) % count + start + count,
+                        j + count
                     ]]
-                    
                 :
                     // reduzierende Schicht
-                    
-                    // gehe über die Schicht unter(!) dieser weil die Anzahk reduziert ist
-                    let (lowerLayer = layers[i - 1])
-                    let (start = firstPointIndex(layers, i))
-                    let (cnt = len(lowerLayer))
+                    // berechne die minimalen Abstände zu den Punkten der nächsten Schicht
+                    let (nextLayer = layers[i + 1])
                     let (closestPoints =
-                        [ for (j = [0: cnt - 1])
-                            closestToPoint(layers[i], layers[i - 1][j]) + start + len(bl[0])
+                        [ for (j = [0: count - 1])
+                            closestToPoint(nextLayer, layers[i][j]) + start + count
                         ])
-
-                    let (def = echo("reduced start", start))
-                    [for (j = [start: start + cnt - 1])
+                    
+                    [for (j = [start: start + count - 1])
                         let (cp = closestPoints[j - start])
-                        let (next = (j + 1) % cnt + start)
+                        let (next = (j - start + 1) % count + start)
                         let (cpNext = closestPoints[next - start])
  
-                        let (abc = echo("cp", j, cp, next, cpNext))
-
                         cp == cpNext ? [ j, next, cp ] : [ j, next, cpNext, cp]
-
                     ]
                 )
                 each pts
         ],
-
-/*
-    // for each point of the previous layer find the closest of these points
-    closestPoints = [ for (i = [0: len(lastLayer) - 1]) closestToPoint(ptst, lastLayer[i]) ];
-
-        // gerundete Schichten auf der Oberseite
-        // beginne mit der letzen Schicht der Rundung
-        let (start = layers * n)
-        let (abc = echo("start", start))
-        let (offset = len(pts) - len(ptst))
-        [
-            // gehe über die letzte Schicht der Rundung
-            for (i = [start: start + n - 1])
-                let (cp = closestPoints[i - start] + offset)
-                let (next = (i + 1) % n + start)
-                let (cpNext = closestPoints[next - start] + offset)
-                cp == cpNext ? [ i, next, cp ] : [ i, next, cpNext, cp]
-        ],
-
 /**/
         // Oberseite: letzte n punkte reversed
-        [[ for (i = [(_edgeLayerCount + 2) * n - 1: -1: (_edgeLayerCount + 1) * n]) i ]]
+        let (start = firstPointIndex(layers, len(layers) - 1))
+        let (end = len(points) -  1)
+        [[ for (i = [end: -1: start]) i ]]
+/**/
     );
 
     render() color("gold") difference() {
         polyhedron(points, faces, convexity = 10);
-//        translate([0, 0, -_heightOffset + 1]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
+        translate([0, 0, -_heightOffset + 0]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
     }
 }
 
@@ -158,9 +136,7 @@ module test5() {
 function firstPointIndex(layers, i) = fPI_(layers, 0, i, 0);
 
 // recursive helper for firstPointIndex
-function fPI_(layers, i, target, sum) = 
-
-let (abc = echo("fpi", i, len(layers[i]), sum))
+function fPI_(layers, i, target, sum) =
     i == target ? sum : fPI_(layers, i + 1, target, sum + len(layers[i]));
 
 module hollowSphere(outerRadius, innerRadius) {
@@ -184,6 +160,19 @@ function baseLayer(points) =
         for (i = [0: len(points) - 1]) i,
     ]
 ];
+
+// generates a list of lists for all edge layers:
+// [ [l0p0, l0p1, ..., l0pn-1], ... [lmp0, lmp1, ..., lmpn-1] ]
+// due to self intersections appearing when offsetting the outline, the layers
+// may have different numbers of points (the higher the less points)
+function edgeLayers(points) =
+[
+    for (i = [0: _edgeLayerCount - 1])            
+         edgeLayer(points, i)
+];
+
+// recursive helper for edgeLayers
+function eL_() = 0;
 
 // returns a list with the points of layer layerN in ccw order seen from above
 // points: outmost edge
@@ -209,21 +198,6 @@ function edgeLayer(points, layerN) =
         pointHeightEdge(layerPoints[i], angle)
     ]
 ;
-
-// generates a list of lists for all edge layers:
-// [ [l0p0, l0p1, ..., l0pn-1], ... [lmp0, lmp1, ..., lmpn-1] ]
-// due to self intersections appearing when offsetting the outline, the layers
-// may have different numbers of points (the higher the less points)
-function edgeLayers(points) =
-[
-    for (i = [0: _edgeLayerCount - 1])            
-         edgeLayer(points, i)
-];
-
-// recursive helper for edgeLayers
-function eL_() = 0;
-
-// faces: closestto point nur wenn die layer verschiedene punktanzahlen haben
 
 function heightAtEdge(p, angle) =
     heightAtTop(p) - _edgeRadius * (1 - sin(angle));

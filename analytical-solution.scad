@@ -1,62 +1,53 @@
-ARMS = 3;
+ARMS = 5;
 
 // knobDiameter
-// test: _knobDiameter = 40
 _knobDiameter = 40;
 
 // test: _q = 24
-_q = 24;
+_q = 180;
 
-// _quality muss ein Vielfaches von ARMS * 2 sein damit der Knopf symmetrisch wird
-// nächstgrößere durch 2 * ARMS teilbare
+// _quality must be a multiple of ARMS * 2 to have the body rotationally symmetrical
+// next larger number divisible by 2 * ARMS
 _quality = ceil(_q / (ARMS * 2)) * ARMS * 2;
 
-echo("quality", _quality);
-
 // armPitch
-// test: 3
-// wenn der arm pitch zu hoch wird, werden die letzten Schichten der abgerundeten Kante zu Polygonen mit Intersections und dann stimmen die Indizes der Faces nicht mehr
-// je mehr arme desto früher passiert das
-//_armPitch = 3.3;
-_armPitch = 3;
-// notchRati2
-// test: 4
+_armPitch = 2;
+// notchRatio
 _notchRatio = 4;
 
-// Radius der gerundeten Oberfläche
+// radius of the top surface's rounding
+// TODO: calculate from a given offset (height above the flat surface)
 _topRadius = 40;
 
-// Korrukturhöhe der Rundung
+// z-offset to compensate for the rounded top surface beeing in the origin
+// TODO: calculate from the dimensions of the knob (e. g. height of the screw head)
 _heightOffset = _topRadius - 12;
 
 // radius of the rounded edge
 _edgeRadius = 2;
 
-// Anzahl Schichten Rundung
+// number of layers of the rounded edge, must at least be two
+// note: layers of points, one larger than the resulting numer of layers of faces
 elTemp = round(_quality * _edgeRadius / _knobDiameter);
 _edgeLayerCount = elTemp >= 2 ? elTemp: 2;
-echo("_edgeLayerCount", _edgeLayerCount);
 
+// make that thing
+render() translate([0, 0, _edgeRadius]) color("gold") knobBody();
 
-//difference() {
-    test5();
-//    cube(30);
-//}
+EPSILON = 1e-10;
 
-module test5() {
-    // Aufbau in Schichten
-    // erste Schicht liegt in der xy Ebene
-    // zweite Schicht mit variablen z Werten
-    // weitere Schichten: z-Wert der zweiten Schicht + sin (edgeAngle)
+// creates the body
+module knobBody() {
+    // built in layers parallel to the xy plane
 
-    kb = knobPoints(ARMS, _knobDiameter);
+    // 2D (x, y) points along the outer limit, ccw seen from above
+    kb = limitPoints(ARMS, _knobDiameter);
 
-    n = len(kb);
+    // layers of the bottom rounded edge
+    bottomEdgeLayers = bottomEdgeLayers(kb);
 
-    // base layer    
-    bl = baseLayer(kb);
-
-    // Schichten der runden Kante und Hilfsschicht für die obere Rundung
+    // layers of the top rounded edge plus a copy of the last layer to allow for subtracting a hollow sphere to make the rounding
+    // TODO: make the rounding by creating layers
     layersTemp = edgeLayers(kb);
     lastLayer = layersTemp[len(layersTemp) - 1];
     topLayer = [[
@@ -64,33 +55,39 @@ module test5() {
             lastLayer[i] + [0, 0, 10]
     ]];
     
-    layers = concat([ bl[0] ], layersTemp, topLayer);
-    
+    // list of all layers, each layer is itself a list of 3D points
+    layers = concat(bottomEdgeLayers, layersTemp, topLayer);
+
+    // all points in a flat list for polyhedron
     points = flattenInnerList(layers);
     
-echo("len points", len(points));
-
-//echo(layers[len(layers) - 2]);
-//echo(layers[len(layers) - 1]);
-
+    // create the faces from bottom to top in three steps:
+    // one face defined by the bottom layer
+    // n faces defined by following layers
+    // on face defined by the top layer
+    // TODO: split into functions
+    // TODO: top / bottom layers with less than three points are not handled yet (towards a general solution). The basic principle is already implemented, we probably just neet to test for the number of points in the first and last layer and adjust the loops accordingly
     faces = concat (
-        [ bl[1] ],
+        // bottom face: points of the first layer ccw
+        // double square brackets: concat unfolds for whatever reason
+        [[ for (i = [0: len(layers[0]) - 1]) i ]],
 
-        // Seitenflächen und gerundete Kante: Vierergruppen über alle Layer
-        // letzte schicht: Prisma nach oben für das Abziehen der Hohlkugel
+        // layers of the sides along the z axis
         [
-            for (i = [0: len(layers) - 2])            
+            // -2: there is one layer of side faces less than points
+            for (i = [0: len(layers) - 2])
                 let (count = len(layers[i]))
                 
                 // check if the next layer has the same number of points
                 let (countDiff = len(layers[i + 1]) - count)
 
                 let (start = firstPointIndex(layers, i))
-//let (abc = echo("i", i, "count", count, "countdiff", countDiff, "start", start))
                 
                 let (pts =
                 countDiff == 0 ?
-                    // normale Schicht                    
+                    // layers have the same number of points, make squares
+                    // TODO: towards a general solution: if the layers are twisted against each other this step might utilize the closestToPoint function
+                    // make a square, go ccw from the bottom left point
                     [for (j = [start: start + count - 1]) [
                         j,
                         (j - start + 1) % count + start,
@@ -98,121 +95,68 @@ echo("len points", len(points));
                         j + count
                     ]]
                 :
-                    // reduzierende Schicht
-                    // berechne die minimalen Abstände zu den Punkten der nächsten Schicht
-                    let (nextLayer = layers[i + 1])
+                let (nextLayer = layers[i + 1])
+                countDiff < 0 ?
+                    // layer has more points than the layer above
+                    // for every point of this layer find the closest point in the layer above, easier than messing around with indizes of deleted points and a more general solution
                     let (closestPoints =
                         [ for (j = [0: count - 1])
                             closestToPoint(nextLayer, layers[i][j]) + start + count
                         ])
-                    
+
+                    // make a square ccw if for two neighboring points of this layer the closest points in the layer above are different, make a triangle otherwise
                     [for (j = [start: start + count - 1])
                         let (cp = closestPoints[j - start])
                         let (next = (j - start + 1) % count + start)
                         let (cpNext = closestPoints[next - start])
  
+                        cp == cpNext
+                            ? [ j, next, cp ]
+                            : [ j, next, cpNext, cp]
+                    ]
+                :
+                    // layer has fewer points than the layer above
+                    // use the same procedure as before but go along the layer above instead of along this layer
+                    let (countNext = len(nextLayer))
+                    let (closestPoints =
+                        [ for (j = [0: countNext - 1])
+                            closestToPoint(layers[i], nextLayer[j]) + start
+                        ])
+
+                    let (startNext = start + count)
+                    [for (j = [startNext: startNext + countNext - 1])
+                        let (cp = closestPoints[j - startNext])
+                        let (next = (j - startNext + 1) % countNext + startNext)
+                        let (cpNext = closestPoints[next - startNext])
                         cp == cpNext ? [ j, next, cp ] : [ j, next, cpNext, cp]
                     ]
                 )
+                // flatten the list
                 each pts
         ],
-/**/
-        // Oberseite: letzte n punkte reversed
+        // top face: points of the last layer clockwise
         let (start = firstPointIndex(layers, len(layers) - 1))
         let (end = len(points) -  1)
         [[ for (i = [end: -1: start]) i ]]
-/**/
     );
 
-    render() color("gold") difference() {
-        polyhedron(points, faces, convexity = 10);
-        translate([0, 0, -_heightOffset + 0]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
-    }
-}
-
-// for a given layer returns the total index of the first point
-// e. g: layer 0: 24 points, layer 1: 18 points, layer 2: 18 points
-// total index of layer 2 is 42: 24 + 18
-function firstPointIndex(layers, i) = fPI_(layers, 0, i, 0);
-
-// recursive helper for firstPointIndex
-function fPI_(layers, i, target, sum) =
-    i == target ? sum : fPI_(layers, i + 1, target, sum + len(layers[i]));
-
-module hollowSphere(outerRadius, innerRadius) {
+    // create a polyhedron with a prism-shaped extension at the top and subtract a hollow sphere from it
+    // TODO: calculate the thickness of the hollow sphere based on the knob's size
     difference() {
-        sphere(outerRadius);
-        sphere(innerRadius);
+        polyhedron(points, faces, convexity = 10);
+        translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
     }
 }
 
-// gets a list with points in 2D (only x and y values)
-// returns a list with two sublists: [ points, faces ]
-function baseLayer(points) =
-[
-    // set the height of all points to 0
-    [
-        for (i = [0: len(points) - 1]) [ points[i].x, points[i].y, 0]
-    ],
-    
-    // the base layer has just one face: all points clockwise
-    [
-        for (i = [0: len(points) - 1]) i,
-    ]
-];
-
-// generates a list of lists for all edge layers:
-// [ [l0p0, l0p1, ..., l0pn-1], ... [lmp0, lmp1, ..., lmpn-1] ]
-// due to self intersections appearing when offsetting the outline, the layers
-// may have different numbers of points (the higher the less points)
-function edgeLayers(points) =
-[
-    for (i = [0: _edgeLayerCount - 1])            
-         edgeLayer(points, i)
-];
-
-// recursive helper for edgeLayers
-function eL_() = 0;
-
-// returns a list with the points of layer layerN in ccw order seen from above
-// points: outmost edge
-function edgeLayer(points, layerN) =
-    // angle of this layer's edge rounding
-    // we have one angle step less than the number of edge layers:
-    // layer 0 is at 0 degrees (horizontal)
-    // layer _edgeLayerCount - 1 is at 90 degrees (vertical)
-    let (angle = 90 / (_edgeLayerCount - 1) * layerN)
-    
-    // horizontal distance of the current layer from the outer edge
-    let (horDist = _edgeRadius * (1 - cos(angle)))
-
-    // (x, y) - points of the current layer, as offset from the outmost edge
-    let (layerPoints = polyEliminatedIntersections(
-        offsetPoly(points, -horDist))
-    )
-    
-    // calculate the heights of the points, depending on the current angle
-    // and the distance of the point from the center
-    [for (i = [0: len(layerPoints) - 1])
-        // height of the point with respect to surface rounding and edge rounding
-        pointHeightEdge(layerPoints[i], angle)
-    ]
-;
-
-function heightAtEdge(p, angle) =
-    heightAtTop(p) - _edgeRadius * (1 - sin(angle));
-
-function pointHeightEdge(p, angle) = [p.x, p.y, heightAtEdge(p, angle)];
-
-function heightAtTop(p) =
-    sqrt(_topRadius^2 - norm([p.x, p.y])^2) - _heightOffset;
-
-function pointHeightTop(p) = [p.x, p.y, heightAtTop(p)];
+/*************************************
+ * knob related functions and modules
+ *************************************/
 
 // generates points for the outher edge of the knob
-// returns an array [ [x1, y1], [x2, y2] ... [xn, yn] ]
-function knobPoints(arms, diameter) =
+// returns a list [ [x1, y1], [x2, y2] ... [xn, yn] ]
+function limitPoints(arms, diameter) =
 
+    // radius of the knob
     let (rKnob = diameter / 2)
 
     // radius of the arm circles
@@ -244,60 +188,58 @@ function knobPoints(arms, diameter) =
     // angle of one arm: tip and notch
     let (angleStep = 360 / ARMS)
     
- // Länge des Bogens auf dem Umfang
-// arms * (Bogen arm + Bogen notch)
-// Winkel Bogen arm:  2 * (PI - beta)
-// Winkel Bogen notch: 2 * gamma
-// Bogen arcArm = degToRad(2 * (180 - beta)) * rK
-// Bogen arcNotch = degToRad(2 * gamma) * rN
-// Schritte pro segment: 360 / arms
-// Anteil Arm: armShare = arcArm / (arcArm + arcNotch)
-// Schritte pro Arm: armSteps = 360 / arms * armShare
-// Schritte pro Notch: notchSteps = 360 / arms - armSteps
-      
+    // length of an arm's arc
     let (arcArmMM = degToRad(2 * (180 - beta)) * rK)
 
+    // length of a notch's arc
     let (arcNotchMM = degToRad(2 * gamma) * rN)
     
+    // share of the arm in the entire sector (arm and notch) 
     let (armShare = arcArmMM / (arcArmMM + arcNotchMM))
 
+    // steps per arm
     let (armSteps = round(_quality / ARMS * armShare))
     
+    // angle per step
     let (armAngleStep = 2 * (180 - beta) / armSteps)
     
+    // steps per notch
     let (notchSteps = _quality / ARMS - armSteps)
     
+    // angle per step
     let (notchAngleStep = 2 * gamma / notchSteps)
 
-// über alle Arme
+// loop over all arms
 [
 for (phi = [0: angleStep: ARMS * angleStep - 1])
+    
+    // center of the arm
     let (armX = rPosK * cos(phi))
     let (armY = rPosK * sin(phi))
 
     let (armStartAngle = phi - (180 - beta))
 
+    // center of the notch
     let (notchX = rPosN * cos(phi + angleStep / 2))
     let (notchY = rPosN * sin(phi + angleStep / 2))
 
     let (notchStartAngle = phi + angleStep / 2 + 180 + gamma)
 
+    // note checkAndSetToZero: when ofsetting the outer edge we occasionally check if a point is on the x axis, thus the y value is set to zero if it is very likely actually zero but differs due to floating point errors
     each concat(
-        // über den Arm
+        // loop over the arm
         [for (i = [0: 1: armSteps - 1])
             let (phi2 = armStartAngle + i * armAngleStep)
-
             [
                 armX + rK * cos(phi2),
                 checkAndSetToZero(armY + rK * sin(phi2))
             ]
         ],
     
-        // über die Notch
+        // loop over the notch
         [for (i = [0: 1: notchSteps - 1])
-            // center liegt außen, laufen im Uhrzeigersinn
+            // center is outside, thus need to go clockwise
             let (phi2 = notchStartAngle - i * notchAngleStep)
-            
             [
                 notchX + rN * cos(phi2),
                 checkAndSetToZero(notchY + rN * sin(phi2))
@@ -305,6 +247,105 @@ for (phi = [0: angleStep: ARMS * angleStep - 1])
         ]
     )
 ];
+
+// generates a list of lists for all bottom edge layers:
+// [ [l0p0, l0p1, ..., l0pn-1], ... [lmp0, lmp1, ..., lmpn-1] ]
+function bottomEdgeLayers(points) =
+[
+    for (i = [0: _edgeLayerCount - 1])            
+         bottomEdgeLayer(points, i)
+];
+
+// creates one layer of the rounded bottom edge
+function bottomEdgeLayer(points, layerN) =
+    // angle of this layer's edge rounding
+    // we have one angle step less than the number of edge layers:
+    // layer 0 is at -90 degrees (bottom)
+    // layer _edgeLayerCount - 1 is at 0 degrees (outmost edge)
+    let (angle = -90 / (_edgeLayerCount - 1) * (_edgeLayerCount - layerN - 1))
+    
+    // horizontal distance of the current layer from the outer edge
+    let (horDist = _edgeRadius * (1 - cos(angle)))
+
+    // (x, y) - points of the current layer, as offset from the outmost edge
+    let (layerPoints = polyEliminatedIntersections(
+        offsetPoly(points, -horDist))
+    )
+    
+    // calculate the heights of the points, depending on the current angle
+    // and the distance of the point from the center
+    [for (i = [0: len(layerPoints) - 1])
+        [ layerPoints[i].x, layerPoints[i].y, _edgeRadius * sin(angle) ]
+    ]
+;
+
+// generates a list of lists for all top edge layers:
+// [ [l0p0, l0p1, ..., l0pn-1], ... [lmp0, lmp1, ..., lmpn-1] ]
+// due to self intersections appearing when offsetting the outline, the layers
+// may have different numbers of points (the higher the less points)
+function edgeLayers(points) =
+[
+    for (i = [0: _edgeLayerCount - 1])            
+         edgeLayer(points, i)
+];
+
+// returns a list with the points of layer layerN in ccw order seen from above
+// points: outer limit of the knob
+function edgeLayer(points, layerN) =
+    // angle of this layer's edge rounding
+    // we have one angle step less than the number of edge layers:
+    // layer 0 is at 0 degrees (horizontal)
+    // layer _edgeLayerCount - 1 is at 90 degrees (vertical)
+    let (angle = 90 / (_edgeLayerCount - 1) * layerN)
+    
+    // horizontal distance of the current layer from the outer edge
+    let (horDist = _edgeRadius * (1 - cos(angle)))
+
+    // (x, y) - points of the current layer, as offset from the outmost edge
+    let (layerPoints = polyEliminatedIntersections(
+        offsetPoly(points, -horDist))
+    )
+    
+    // calculate the heights of the points, depending on the current angle
+    // and the distance of the point from the center
+    [for (i = [0: len(layerPoints) - 1])
+        // height of the point with respect to surface rounding and edge rounding
+        pointHeightEdge(layerPoints[i], angle)
+    ]
+;
+
+function heightAtEdge(p, angle) =
+    heightAtTop(p) - _edgeRadius * (1 - sin(angle));
+
+// sets the z value of the point to the according height (rounded edge)
+function pointHeightEdge(p, angle) = [p.x, p.y, heightAtEdge(p, angle)];
+
+function heightAtTop(p) =
+    sqrt(_topRadius^2 - norm([p.x, p.y])^2) - _heightOffset;
+
+// sets the z value of the point to the according height (rounded top surface)
+function pointHeightTop(p) = [p.x, p.y, heightAtTop(p)];
+
+// for a given layer returns the total index of the first point
+// e. g: layer 0: 24 points, layer 1: 18 points, layer 2: 15 points
+// total index of layer 2 is 24 + 18 = 42
+function firstPointIndex(layers, i) = fPI_(layers, 0, i, 0);
+
+// recursive helper for firstPointIndex
+function fPI_(layers, i, target, sum) =
+    i == target ? sum : fPI_(layers, i + 1, target, sum + len(layers[i]));
+
+// make a hollow sphere
+module hollowSphere(outerRadius, innerRadius) {
+    difference() {
+        sphere(outerRadius);
+        sphere(innerRadius);
+    }
+}
+
+/****************************************************************
+ * more or less general functions and modules to handle polygons
+ ****************************************************************/
 
 // eliminates the intersections from the given polygon
 // ATTENTION! This function is designed to be fast on the rotationally
@@ -380,13 +421,12 @@ i == len(points) - 1
         : concat(result, [[ p1.x - p1.y * (p2.x - p1.x) / (p2.y - p1.y), 0]])
 ;
 
-// finds the point closest to the center
+// in a list of points finds the point closest to the center
 // returns the index of the closest point
-//function closestToCenter(points) = cTC_(points, 0, norm(points[0]), 0);
 function closestToCenter(points) = closestToPoint(points, [0, 0]);
 
-// finds the point of the list points that is closest to a given point p
-// returns the index
+// in a list of points finds the point that is closest to a given point p
+// returns the index of the closest point
 function closestToPoint(points, p) = cTP_(points, p, 0, norm(p - points[0]), 0);
 
 // recursive helper for closestToPoint()
@@ -399,7 +439,8 @@ function cTP_(points, p, index, min, minIndex) =
         let (m = distance < min || isActuallyZero(delta) ? distance : min)
         let (i = distance < min || isActuallyZero(delta) ? index : minIndex)
 
-        cTP_(points, p, index + 1, m, i);    
+        cTP_(points, p, index + 1, m, i)
+;    
 
 // offsets a polygon
 function offsetPoly(points, offset) =
@@ -441,13 +482,14 @@ for (i = [0: 1: n - 1])
     ]
 ];
 
+// rotates all points of the given list around the z axis by the angle
 function rotatePointsAroundZAxis(points, angle) =
 [
     for (i = [0: 1: len(points) - 1])
         rotatePointAroundZAxis(points[i], angle)
 ];
 
-
+// rotates the given point around the z axis by the angle
 function rotatePointAroundZAxis(point, angle) =
     [
         [cos(angle), -sin(angle)],
@@ -456,9 +498,12 @@ function rotatePointAroundZAxis(point, angle) =
     * point
 ;
 
+/*******************
+ * helper functions
+ *******************/
 function checkAndSetToZero(x) = isActuallyZero(x) ? 0 : x;
 
-function isActuallyZero(x) = abs(x) < 1e-10;
+function isActuallyZero(x) = abs(x) < EPSILON;
     
 function degToRad(degrees) = degrees * PI / 180;
 
@@ -479,4 +524,5 @@ function rotateList(list, n) =
         list[(sI + i) % count]
 ];
 
+// flattens the inner lists of the given list
 function flattenInnerList(list) = [for (i = [0: len(list) - 1]) each list[i]];

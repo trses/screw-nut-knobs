@@ -1,9 +1,9 @@
-ARMS = 5;
+ARMS = 13;
 
 // knobDiameter
 _knobDiameter = 40;
 
-// test: _q = 24
+// number of segments along the circumference
 _q = 180;
 
 // _quality must be a multiple of ARMS * 2 to have the body rotationally symmetrical
@@ -11,8 +11,12 @@ _q = 180;
 _quality = ceil(_q / (ARMS * 2)) * ARMS * 2;
 echo("quality", _quality);
 
+// 13 arms works with slight changes of the arm pitch (<= 1.96, >= 2.18 but not for == 3)
+// it has nothing to do with the derived number of steps per arm / per notch
+// since this doesn't change with the slight modifications
 // armPitch
 _armPitch = 2;
+
 // notchRatio
 _notchRatio = 4;
 
@@ -217,6 +221,7 @@ function limitPoints(arms, diameter) =
     
     // steps per notch
     let (notchSteps = _quality / ARMS - armSteps)
+echo ("as, ns, tot", armSteps, notchSteps, (armSteps + notchSteps) * ARMS)
     
     // angle per step
     let (notchAngleStep = 2 * gamma / notchSteps)

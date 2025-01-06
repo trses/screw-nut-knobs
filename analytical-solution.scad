@@ -35,8 +35,6 @@ _edgeLayerCount = elTemp >= 2 ? elTemp : 2;
 // make that thing
 render() translate([0, 0, _edgeRadius]) color("gold") knobBody();
 
-EPSILON = 1e-10;
-
 // creates the body
 module knobBody() {
     // built out of layers basically parallel to the xy plane
@@ -534,6 +532,9 @@ function rotatePointAroundZAxis(point, angle) =
 /*******************
  * helper functions
  *******************/
+
+EPSILON = 1e-10;
+
 function checkAndSetToZero(x) = isActuallyZero(x) ? 0 : x;
 
 function isActuallyZero(x) = abs(x) < EPSILON;

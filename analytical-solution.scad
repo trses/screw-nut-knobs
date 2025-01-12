@@ -1,4 +1,4 @@
-ARMS = 17;
+ARMS = 13;
 
 // knobDiameter
 _knobDiameter = 40;

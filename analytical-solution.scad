@@ -29,7 +29,7 @@ _topRadius = 40;
 _heightOffset = _topRadius - 12;
 
 // radius of the rounded edge
-_edgeRadius = 2;
+_edgeRadius = 1.7;
 
 // number of layers of the rounded edge, must at least be two
 // note: layers of points, one larger than the resulting numer of layers of faces
@@ -106,6 +106,7 @@ module knobBody() {
                 :
                 let (nextLayer = layers[i + 1])
                 countDiff < 0 ?
+let (abc = echo("i", i, "countDiff", countDiff))
                     // layer has more points than the layer above
                     // for every point of this layer find the closest point in the layer 
                     // above, easier than messing around with indizes of deleted points 
@@ -128,6 +129,7 @@ module knobBody() {
                             : [ j, cp, cpNext, next]
                     ]
                 :
+let (abc = echo("i", i, "countDiff", countDiff))
                     // layer has fewer points than the layer above
                     // use the same procedure as before but go along the layer above 
                     // instead of along this layer
@@ -156,13 +158,22 @@ module knobBody() {
         [[ for (i = [end: -1: start]) i ]]
     );
 
+    echo("points", len(points));
+    
     // create a polyhedron with a prism-shaped extension at the top and subtract a 
     // hollow sphere from it
     // TODO: calculate the thickness of the hollow sphere based on the knob's size
+/**/
     difference() {
         polyhedron(points, faces, convexity = 10);
         translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
     }
+/*
+    union() {
+        polyhedron(points, faces, convexity = 10);
+        translate([50, 0, 0]) cube(20);
+    }
+/**/
 }
 
 /*************************************

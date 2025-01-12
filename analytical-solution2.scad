@@ -1,10 +1,10 @@
-ARMS = 13;
+ARMS = 3;
 
 // knobDiameter
 _knobDiameter = 40;
 
 // test: _q = 24
-_q = 180;
+_q = 24;
 
 // _quality must be a multiple of ARMS * 2 to have the body rotationally symmetrical
 // next larger number divisible by 2 * ARMS
@@ -30,12 +30,27 @@ _edgeRadius = 2;
 // number of layers of the rounded edge, must at least be two
 // note: layers of points, one larger than the resulting numer of layers of faces
 elTemp = round(_quality * _edgeRadius / _knobDiameter);
-_edgeLayerCount = elTemp >= 2 ? elTemp : 2;
+_edgeLayerCount = 1 + (elTemp >= 2 ? elTemp : 2);
 
 // make that thing
-//render()
+render()
+    translate([0, 0, _edgeRadius])
+//        color("gold")
+            knobBody();
 
-translate([0, 0, _edgeRadius]) knobBody();
+// test();
+
+module test() {
+
+difference() {
+    for (i = [0: 10: 90]) {
+        translate([0, 0, 2 * sin(i)])
+            linear_extrude(0.2) polygon(limitPoints(3, 40 - 4 * (1- cos(i))));
+    }
+    translate([-20, 0, 0]) cube(40);
+}
+}
+
 
 // creates the body
 module knobBody() {
@@ -46,20 +61,59 @@ module knobBody() {
 
     // layers of the bottom rounded edge
     bottomEdgeLayers = bottomEdgeLayers(kb);
-
+/*
     // layers of the top rounded edge plus an elevated copy of the last
     // layer to allow for subtracting a hollow sphere to make the rounding
     // TODO: make the rounding by creating layers
     layersTemp = edgeLayers(kb);
     lastLayer = layersTemp[len(layersTemp) - 1];
+
     topLayer = [[
         for (i = [0: len(lastLayer) - 1])
             lastLayer[i] + [0, 0, 10]
     ]];
-    
+
     // list of all layers, each layer is itself a list of 3D points
     layers = concat(bottomEdgeLayers, layersTemp, topLayer);
 
+/**/
+    eL = edgeLayers(kb);
+
+    tL = topLayers(kb);
+
+/*
+    for (i = [0: len(tL) - 1]) {
+        let (pts = [
+            for (j = [0: len(tL[i]) - 1])
+                [tL[i][j].x, tL[i][j].y]
+        ])
+        color("cyan") translate([0, 0, 2 * i + 12]) linear_extrude(1) polygon(pts);
+/*        
+        if (i == 5) {
+            for (j = [0: len(tL[i]) - 1]) {
+                translate([0, 0, 11]) translate(tL[i][j]) cylinder(h = j + 1, d = 0.3);
+            }
+        }
+/**/
+//    }
+    
+    
+/**/
+
+// Erstellung der faces: Wenn vom aktuellen Layer zum nächsten Layer eine Vertiefung entsteht, wird eine zusätzliche Fläche eingefügt, welche die Dreiecke an der Spitze ersetzt
+    
+    
+    lastLayer = tL[len(tL) - 1];
+
+
+    topLayer = [[
+        for (i = [0: len(lastLayer) - 1])
+            lastLayer[i] + [0, 0, 10]
+    ]];
+
+    // list of all layers, each layer is itself a list of 3D points
+    layers = concat(bottomEdgeLayers, eL, tL, topLayer);
+/**/
     // all points in a flat list for polyhedron
     points = flattenInnerList(layers);
     
@@ -96,13 +150,42 @@ module knobBody() {
                     // make a square, go ccw from the bottom left point
                     [for (j = [start: start + count - 1]) [
                         j,
-                        j + count,
+                        (j - start + 1) % count + start,
                         (j - start + 1) % count + start + count,
-                        (j - start + 1) % count + start
+                        j + count
                     ]]
                 :
                 let (nextLayer = layers[i + 1])
                 countDiff < 0 ?
+
+                    // layer has more points than the layer above
+                    let (closestPoints =
+                        [ for (j = [0: count - 1])
+                            closestToPoint(nextLayer, layers[i][j]) + start + count
+                        ])
+
+                    // make a square ccw if for two neighboring points of this layer the 
+                    // closest points in the layer above are different, make a triangle 
+                    // otherwise
+                    
+                    
+// closestPoints enthält die Nummer der Ecke, die am nächsten liegt                    
+                    
+                    [for (j = [start: start + count - 1])
+                        let (cp = closestPoints[j - start])
+                        let (next = (j - start + 1) % count + start)
+                        let (cpNext = closestPoints[next - start])
+                        
+                        let (abc = echo("sc", "j", j, "index", j - start, sameClosest(closestPoints, j - start), "i", i))
+ 
+                        cp == cpNext
+                            ? [ j, next, cp ]
+                            : [ j, next, cpNext, cp]
+                    ]
+
+
+                
+/*
                     // layer has more points than the layer above
                     // for every point of this layer find the closest point in the layer 
                     // above, easier than messing around with indizes of deleted points 
@@ -121,9 +204,11 @@ module knobBody() {
                         let (cpNext = closestPoints[next - start])
  
                         cp == cpNext
-                            ? [ j, cp, next ]
-                            : [ j, cp, cpNext, next]
+                            ? [ j, next, cp ]
+                            : [ j, next, cpNext, cp]
                     ]
+/**/
+
                 :
                     // layer has fewer points than the layer above
                     // use the same procedure as before but go along the layer above 
@@ -162,6 +247,19 @@ module knobBody() {
     }
 }
 
+
+// sammle die Indizes aller aufeinanderfolgenden Punkte, die denselben closestToPoint haben
+// beginnend beim index (aktueller Punkt)
+function sameClosest(cpts, index) = sC_(cpts, index, cpts[index], []);
+
+function sC_(cpts, index, currentClosest, result) =
+// fertig wenn current != currentClosest
+cpts[index] != currentClosest
+    ? result
+    : sC_(cpts, (index + 1) % len(cpts), cpts[index], concat(result, index))
+;
+
+
 /*************************************
  * knob related functions and modules
  *************************************/
@@ -174,7 +272,7 @@ function limitPoints(arms, diameter) =
     let (rKnob = diameter / 2)
 
     // radius of the arm circles
-    let (rK = PI * rKnob / ((_armPitch + 1) * ARMS + PI))
+    let (rK = PI * rKnob / ((_armPitch + 1) * arms + PI))
     // radius of the notch circles
     let (rN = _notchRatio * rK)
 
@@ -182,7 +280,7 @@ function limitPoints(arms, diameter) =
     let (rPosK = rKnob - rK)
 
     // angle between arm and notch (360 / ARMS / 2)
-    let (alpha = 180 / ARMS)
+    let (alpha = 180 / arms)
 
     // angle between center of knob, center of notch, center of arm
     let (gamma = asin(sin(alpha) * rPosK / (rN + rK)))
@@ -200,7 +298,7 @@ function limitPoints(arms, diameter) =
     let (alphaC = asin(rK * sin(beta) / rCore))
 
     // angle of one arm: tip and notch
-    let (angleStep = 360 / ARMS)
+    let (angleStep = 360 / arms)
     
     // length of an arm's arc
     let (arcArmMM = degToRad(2 * (180 - beta)) * rK)
@@ -212,20 +310,20 @@ function limitPoints(arms, diameter) =
     let (armShare = arcArmMM / (arcArmMM + arcNotchMM))
 
     // steps per arm
-    let (armSteps = round(_quality / ARMS * armShare))
+    let (armSteps = round(_quality / arms * armShare))
     
     // angle per step
     let (armAngleStep = 2 * (180 - beta) / armSteps)
     
     // steps per notch
-    let (notchSteps = _quality / ARMS - armSteps)
+    let (notchSteps = _quality / arms - armSteps)
     
     // angle per step
     let (notchAngleStep = 2 * gamma / notchSteps)
 
 // loop over all arms
 [
-for (phi = [0: angleStep: ARMS * angleStep - 1])
+for (phi = [0: angleStep: arms * angleStep - 1])
     
     // center of the arm
     let (armX = rPosK * cos(phi))
@@ -318,16 +416,50 @@ function edgeLayer(points, layerN) =
     let (horDist = _edgeRadius * (1 - cos(angle)))
 
     // (x, y) - points of the current layer, as offset from the outmost edge
+/**/
     let (layerPoints = polyEliminatedIntersections(
         offsetPoly(points, -horDist))
     )
-    
+/*
+    let (layerPoints = limitPoints(ARMS, _knobDiameter - horDist))
+/**/
     // calculate the heights of the points, depending on the current angle
     // and the distance of the point from the center
     [for (i = [0: len(layerPoints) - 1])
         // height of the point with respect to surface rounding and edge rounding
         pointHeightEdge(layerPoints[i], angle)
     ]
+;
+
+function topLayers(points) =
+    let (ctc = closestToCenter(points))
+    
+    let (dist = norm(points[ctc]))
+//    let (dist = _knobDiameter - 2)
+    let (abc = echo("dist", dist))
+[
+    for (offset = [_edgeRadius + 2: 2: dist])  
+         topLayer(points, offset)
+];
+
+function topLayer(points, offset) =
+
+    let (abc = echo("offset", offset))
+/**/
+    // (x, y) - points of the current layer, as offset from the outmost edge
+    let (layerPoints = polyEliminatedIntersections(
+        offsetPoly(points, -offset))
+    )
+/*
+    let (layerPoints = limitPoints(ARMS, _knobDiameter - offset))
+/**/
+    // calculate the heights of the points, depending on the current angle
+    // and the distance of the point from the center
+    [for (i = [0: len(layerPoints) - 1])
+        // height of the point with respect to surface rounding and edge rounding
+        pointHeightTop(layerPoints[i])
+    ]
+
 ;
 
 function heightAtEdge(p, angle) =
@@ -366,7 +498,7 @@ module hollowSphere(outerRadius, innerRadius) {
 // eliminates the intersections from the given polygon
 // ATTENTION! This function is designed to be fast on the rotationally
 // symmetric geometry of the knobs. It does not work for the general case.
-// the idea is to find the closest point to the center and use this as
+// The idea is to find the closest point to the center and use this as
 // starting point. Due to the rotational symmetry of the knob there are
 // several closest points (one or two per notch). We furthermore know that
 // the first arm is mirrored on the x-axis. So we use that starting point
@@ -378,7 +510,7 @@ module hollowSphere(outerRadius, innerRadius) {
 // Either of these points (the intersection with the x-axis or the regular
 // point on the x-axis) mark the last point we might take.
 // These points are first mirrored at the x-axis to have a full arm and then
-// rotated around the z-axis arm times to make the full outer limit of the knob.
+// rotated around the z-axis ARMS times to make the full outer limit of the knob.
 function polyEliminatedIntersections(points) = 
 
     // we need to check only one arm, the remainder is symmetric
@@ -394,6 +526,8 @@ function polyEliminatedIntersections(points) =
     // we don't want to calculate the intersection of the last edge with
     // the x-axis
     let (lastIndex = points[(startIndex + n / 2) % len(points)].y == 0 ? n / 2 : n / 2 - 1)
+    
+let (abc = echo("startIndex", startIndex, "lastIndex", lastIndex))
     
     // make the list of the points that need to be checked for intersections
     let (pts = [for (i = [0: 1: lastIndex])

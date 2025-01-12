@@ -163,7 +163,10 @@ let (abc = echo("i", i, "countDiff", countDiff))
     // create a polyhedron with a prism-shaped extension at the top and subtract a 
     // hollow sphere from it
     // TODO: calculate the thickness of the hollow sphere based on the knob's size
+
 /**/
+    polyhedron(points, faces, convexity = 10);    
+/*
     difference() {
         polyhedron(points, faces, convexity = 10);
         translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);

@@ -164,9 +164,9 @@ let (abc = echo("i", i, "countDiff", countDiff))
     // hollow sphere from it
     // TODO: calculate the thickness of the hollow sphere based on the knob's size
 
-/**/
-    polyhedron(points, faces, convexity = 10);    
 /*
+    polyhedron(points, faces, convexity = 10);    
+/**/
     difference() {
         polyhedron(points, faces, convexity = 10);
         translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);

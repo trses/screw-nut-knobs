@@ -1,4 +1,4 @@
-ARMS = 13;
+ARMS = 17;
 
 // knobDiameter
 _knobDiameter = 40;
@@ -37,7 +37,8 @@ elTemp = round(_quality * _edgeRadius / _knobDiameter);
 _edgeLayerCount = elTemp >= 2 ? elTemp : 2;
 
 // make that thing
-render() translate([0, 0, _edgeRadius]) color("gold") knobBody();
+//render()
+translate([0, 0, _edgeRadius]) knobBody();
 
 // creates the body
 module knobBody() {
@@ -98,9 +99,9 @@ module knobBody() {
                     // make a square, go ccw from the bottom left point
                     [for (j = [start: start + count - 1]) [
                         j,
-                        (j - start + 1) % count + start,
+                        j + count,
                         (j - start + 1) % count + start + count,
-                        j + count
+                        (j - start + 1) % count + start
                     ]]
                 :
                 let (nextLayer = layers[i + 1])
@@ -123,8 +124,8 @@ module knobBody() {
                         let (cpNext = closestPoints[next - start])
  
                         cp == cpNext
-                            ? [ j, next, cp ]
-                            : [ j, next, cpNext, cp]
+                            ? [ j, cp, next ]
+                            : [ j, cp, cpNext, next]
                     ]
                 :
                     // layer has fewer points than the layer above

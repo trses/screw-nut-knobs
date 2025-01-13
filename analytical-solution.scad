@@ -1,21 +1,18 @@
-ARMS = 13;
+ARMS = 5;
 
 // knobDiameter
 _knobDiameter = 40;
 
 // number of segments along the circumference
-_q = 180;
+_q = 360;
 
 // _quality must be a multiple of ARMS * 2 to have the body rotationally symmetrical
 // next larger number divisible by 2 * ARMS
 _quality = ceil(_q / (ARMS * 2)) * ARMS * 2;
 echo("quality", _quality);
 
-// 13 arms works with slight changes of the arm pitch (<= 1.96, >= 2.18 but not for == 3)
-// it has nothing to do with the derived number of steps per arm / per notch
-// since this doesn't change with the slight modifications
 // armPitch
-_armPitch = 3.1;
+_armPitch = 2;
 
 // notchRatio
 _notchRatio = 4;
@@ -78,7 +75,6 @@ module knobBody() {
         // bottom face: points of the first layer ccw
         // double square brackets: concat unfolds for whatever reason
         [[ for (i = [0: len(layers[0]) - 1]) i ]],
-//        [ for (i = [0: len(layers[0]) - 1]) [i, (i + 1) % len(layers[0]), len(points) ]],
 
         // layers of the sides along the z axis
         [
@@ -91,13 +87,12 @@ module knobBody() {
                 let (countDiff = nextCount - count)
 
                 let (start = firstPointIndex(layers, i))
-let (abc = echo("start", start, "count", count, "nextCount", nextCount))
                 let (pts =
                 countDiff == 0 ?
                     // layers have the same number of points, make squares
                     // TODO: towards a general solution: if the layers are twisted 
                     // against each other this step might utilize the closestToPoint function
-                    // make a square, go ccw from the bottom left point
+                    // make a square, go clockwise from the bottom left point
                     [for (j = [start: start + count - 1]) [
                         j,
                         j + count,
@@ -107,7 +102,6 @@ let (abc = echo("start", start, "count", count, "nextCount", nextCount))
                 :
                 let (nextLayer = layers[i + 1])
                 countDiff < 0 ?
-let (abc = echo("i", i, "countDiff", countDiff))
                     // layer has more points than the layer above
                     // for every point of this layer find the closest point in the layer 
                     // above, easier than messing around with indizes of deleted points 
@@ -117,133 +111,67 @@ let (abc = echo("i", i, "countDiff", countDiff))
                             closestToPoint(nextLayer, layers[i][j]) + start + count
                         ])
 
-                    // make a square ccw if for two neighboring points of this layer the 
-                    // closest points in the layer above are different, make a triangle 
-                    // otherwise
+                    // if for two neighboring points of this layer the closest points
+                    // in the layer above
+                    // #1: are the same: make a triangle
+                    // #2: are neighbors: make a square
+                    // #3: have another point (cpn) inbetween: make a triangle AND a square
                     flattenInnerList(
                     [for (j = [start: start + count - 1])
                         let (cp = closestPoints[j - start])
-                        let (cp1 = (cp - start - count + 1) % nextCount + start + count)
+                        // the point after the cp
+                        let (cpn = (cp - start - count + 1) % nextCount + start + count)
                         let (next = (j - start + 1) % count + start)
+                        // the cp of the next point in this layer
                         let (cpNext = closestPoints[next - start])
- 
-// wenn cpNext nicht cp + 1 ist:
-// mach ein Dreieck j, cp, cp + 1 und ein Viereck j, cp + 1, cpNext, j + 1
  
                         cp == cpNext
                             ? [[ j, cp, next ]]
-                        : cpNext == cp1
+                        : cpNext == cpn
                             ? [[ j, cp, cpNext, next]]
-                        : [[j, cp, cp1], [j, cp1, cpNext, next]]
+                        : [[j, cp, cpn], [j, cpn, cpNext, next]]
                     ])
                 :
-let (abc = echo("i", i, "countDiff", countDiff))
                     // layer has fewer points than the layer above
                     // use the same procedure as before but go along the layer above 
                     // instead of along this layer
-                    let (countNext = len(nextLayer))
                     let (closestPoints =
-                        [ for (j = [0: countNext - 1])
+                        [ for (j = [0: nextCount - 1])
                             closestToPoint(layers[i], nextLayer[j]) + start
                         ])
 
                     let (startNext = start + count)
                     flattenInnerList(
-                    [for (j = [startNext: startNext + countNext - 1])
+                    [for (j = [startNext: startNext + nextCount - 1])
                         let (cp = closestPoints[j - startNext])
-                        let (cp1 = (cp - start + 1) % count + start)
-                        let (next = (j - startNext + 1) % countNext + startNext)
+                        let (cpn = (cp - start + 1) % count + start)
+                        let (next = (j - startNext + 1) % nextCount + startNext)
                         let (cpNext = closestPoints[next - startNext])
-let (abc = i == 1 ? echo("j", j, "cp", cp, "cpNext", cpNext) : 0)
+
                         cp == cpNext
                             ? [[ j, next, cp ]]
-                        : cpNext == cp1
+                        : cpNext == cpn
                             ? [[ j, next, cpNext, cp]]
-                        : [[j, cp1, cp], [j, next, cpNext, cp1]]
-/*
-                        cp == cpNext
-                            ? [ j, next, cp ]
-                            : [ j, next, cpNext, cp]
-/**/
+                        : [[j, cpn, cp], [j, next, cpNext, cpn]]
                     ])
                 )
                 // flatten the list
                 each pts
         ],
-/**/
+
         // top face: points of the last layer clockwise
         let (start = firstPointIndex(layers, len(layers) - 1))
         let (end = len(points) -  1)
         [[ for (i = [end: -1: start]) i ]]
-/*
-        // top face: points of the last layer clockwise
-        let (start = firstPointIndex(layers, len(layers) - 1))
-        let (end = len(points) -  2)
-        let (count = len(layers[len(layers) - 1]))
-        let (abc = echo("count", count, "start", start, "end", end))
-        [ for (i = [start: end]) [i, len(points) - 1, (i + 1) % (count) + start] ]
-/**/
     );
 
-echo(len(layers[16]));
-
-l0 = layers[0];
-
-l1 = layers[1];
-
-l2 = layers[2];
-
-size = 0.03;
-/*
-color("red") {
-    translate(l2[len(l2) - 2]) sphere(size, $fn = 18);
-    translate(l2[len(l2) - 1]) sphere(size, $fn = 18);
-    translate(l2[0]) sphere(size / 10, $fn = 18);
-    translate(l2[1]) sphere(size / 10, $fn = 18);
-    translate(l2[2]) sphere(size / 10, $fn = 18);
-    translate(l2[3]) sphere(size, $fn = 18);
-    translate(l2[4]) sphere(size, $fn = 18);
-    translate(l2[5]) sphere(size, $fn = 18);
-}
-
-    translate(l1[len(l1) - 2]) color("cyan") sphere(size, $fn = 18);
-    translate(l1[len(l1) - 1]) color("cyan") sphere(size / 20, $fn = 18);
-    translate(l1[0]) color("skyblue") sphere(size / 20, $fn = 18);
-    translate(l1[1]) color("blue") sphere(size / 20, $fn = 18);
-    translate(l1[2]) color("cyan") sphere(size, $fn = 18);
-    translate(l1[3]) color("cyan") sphere(size, $fn = 18);
-
-
-/**/
- //   echo(points);
-    
     // create a polyhedron with a prism-shaped extension at the top and subtract a 
     // hollow sphere from it
     // TODO: calculate the thickness of the hollow sphere based on the knob's size
-
-/*
-    polyhedron(points, faces, convexity = 10);    
-//    polyhedron(concat(points, [[0, 0, -_edgeRadius]]), faces, convexity = 10);
-
-/**/
     difference() {
         polyhedron(points, faces, convexity = 10);
-        echo("test");
-        translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
+        translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality);
     }
-/*
-    union() {
-        polyhedron(points, faces, convexity = 10);
-        translate([50, 0, 0]) cube(20);
-    }
-/**/
-
-/*
-union() {
-    translate([50, 0, 0]) cube(20);
-    translate([0, 50, 0]) cube(20);
-}
-*/
 }
 
 /*************************************
@@ -303,14 +231,12 @@ function limitPoints(arms, diameter) =
     
     // steps per notch
     let (notchSteps = _quality / ARMS - armSteps)
-echo ("as, ns, tot", armSteps, notchSteps, (armSteps + notchSteps) * ARMS)
     
     // angle per step
     let (notchAngleStep = 2 * gamma / notchSteps)
 
 // loop over all arms
-[
-for (phi = [0: angleStep: ARMS * angleStep - 1])
+[for (phi = [0: angleStep: ARMS * angleStep - 1])
     
     // center of the arm
     let (armX = rPosK * cos(phi))

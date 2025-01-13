@@ -15,7 +15,7 @@ echo("quality", _quality);
 // it has nothing to do with the derived number of steps per arm / per notch
 // since this doesn't change with the slight modifications
 // armPitch
-_armPitch = 2;
+_armPitch = 3.1;
 
 // notchRatio
 _notchRatio = 4;
@@ -29,7 +29,7 @@ _topRadius = 40;
 _heightOffset = _topRadius - 12;
 
 // radius of the rounded edge
-_edgeRadius = 1.7;
+_edgeRadius = 2;
 
 // number of layers of the rounded edge, must at least be two
 // note: layers of points, one larger than the resulting numer of layers of faces
@@ -37,8 +37,7 @@ elTemp = round(_quality * _edgeRadius / _knobDiameter);
 _edgeLayerCount = elTemp >= 2 ? elTemp : 2;
 
 // make that thing
-//render()
-translate([0, 0, _edgeRadius]) knobBody();
+translate([0, 0, _edgeRadius]) color("gold") knobBody();
 
 // creates the body
 module knobBody() {
@@ -57,7 +56,7 @@ module knobBody() {
     lastLayer = layersTemp[len(layersTemp) - 1];
     topLayer = [[
         for (i = [0: len(lastLayer) - 1])
-            lastLayer[i] + [0, 0, 10]
+            [lastLayer[i].x, lastLayer[i].y, 20]
     ]];
     
     // list of all layers, each layer is itself a list of 3D points
@@ -79,18 +78,20 @@ module knobBody() {
         // bottom face: points of the first layer ccw
         // double square brackets: concat unfolds for whatever reason
         [[ for (i = [0: len(layers[0]) - 1]) i ]],
+//        [ for (i = [0: len(layers[0]) - 1]) [i, (i + 1) % len(layers[0]), len(points) ]],
 
         // layers of the sides along the z axis
         [
             // -2: there is one layer of side faces less than layers of points
             for (i = [0: len(layers) - 2])
                 let (count = len(layers[i]))
+                let (nextCount = len(layers[i + 1]))
                 
                 // check if the next layer has the same number of points
-                let (countDiff = len(layers[i + 1]) - count)
+                let (countDiff = nextCount - count)
 
                 let (start = firstPointIndex(layers, i))
-                
+let (abc = echo("start", start, "count", count, "nextCount", nextCount))
                 let (pts =
                 countDiff == 0 ?
                     // layers have the same number of points, make squares
@@ -119,15 +120,22 @@ let (abc = echo("i", i, "countDiff", countDiff))
                     // make a square ccw if for two neighboring points of this layer the 
                     // closest points in the layer above are different, make a triangle 
                     // otherwise
+                    flattenInnerList(
                     [for (j = [start: start + count - 1])
                         let (cp = closestPoints[j - start])
+                        let (cp1 = (cp - start - count + 1) % nextCount + start + count)
                         let (next = (j - start + 1) % count + start)
                         let (cpNext = closestPoints[next - start])
  
+// wenn cpNext nicht cp + 1 ist:
+// mach ein Dreieck j, cp, cp + 1 und ein Viereck j, cp + 1, cpNext, j + 1
+ 
                         cp == cpNext
-                            ? [ j, cp, next ]
-                            : [ j, cp, cpNext, next]
-                    ]
+                            ? [[ j, cp, next ]]
+                        : cpNext == cp1
+                            ? [[ j, cp, cpNext, next]]
+                        : [[j, cp, cp1], [j, cp1, cpNext, next]]
+                    ])
                 :
 let (abc = echo("i", i, "countDiff", countDiff))
                     // layer has fewer points than the layer above
@@ -140,25 +148,74 @@ let (abc = echo("i", i, "countDiff", countDiff))
                         ])
 
                     let (startNext = start + count)
+                    flattenInnerList(
                     [for (j = [startNext: startNext + countNext - 1])
                         let (cp = closestPoints[j - startNext])
+                        let (cp1 = (cp - start + 1) % count + start)
                         let (next = (j - startNext + 1) % countNext + startNext)
                         let (cpNext = closestPoints[next - startNext])
+let (abc = i == 1 ? echo("j", j, "cp", cp, "cpNext", cpNext) : 0)
+                        cp == cpNext
+                            ? [[ j, next, cp ]]
+                        : cpNext == cp1
+                            ? [[ j, next, cpNext, cp]]
+                        : [[j, cp1, cp], [j, next, cpNext, cp1]]
+/*
                         cp == cpNext
                             ? [ j, next, cp ]
                             : [ j, next, cpNext, cp]
-                    ]
+/**/
+                    ])
                 )
                 // flatten the list
                 each pts
         ],
+/**/
         // top face: points of the last layer clockwise
         let (start = firstPointIndex(layers, len(layers) - 1))
         let (end = len(points) -  1)
         [[ for (i = [end: -1: start]) i ]]
+/*
+        // top face: points of the last layer clockwise
+        let (start = firstPointIndex(layers, len(layers) - 1))
+        let (end = len(points) -  2)
+        let (count = len(layers[len(layers) - 1]))
+        let (abc = echo("count", count, "start", start, "end", end))
+        [ for (i = [start: end]) [i, len(points) - 1, (i + 1) % (count) + start] ]
+/**/
     );
 
-    echo("points", len(points));
+echo(len(layers[16]));
+
+l0 = layers[0];
+
+l1 = layers[1];
+
+l2 = layers[2];
+
+size = 0.03;
+/*
+color("red") {
+    translate(l2[len(l2) - 2]) sphere(size, $fn = 18);
+    translate(l2[len(l2) - 1]) sphere(size, $fn = 18);
+    translate(l2[0]) sphere(size / 10, $fn = 18);
+    translate(l2[1]) sphere(size / 10, $fn = 18);
+    translate(l2[2]) sphere(size / 10, $fn = 18);
+    translate(l2[3]) sphere(size, $fn = 18);
+    translate(l2[4]) sphere(size, $fn = 18);
+    translate(l2[5]) sphere(size, $fn = 18);
+}
+
+    translate(l1[len(l1) - 2]) color("cyan") sphere(size, $fn = 18);
+    translate(l1[len(l1) - 1]) color("cyan") sphere(size / 20, $fn = 18);
+    translate(l1[0]) color("skyblue") sphere(size / 20, $fn = 18);
+    translate(l1[1]) color("blue") sphere(size / 20, $fn = 18);
+    translate(l1[2]) color("cyan") sphere(size, $fn = 18);
+    translate(l1[3]) color("cyan") sphere(size, $fn = 18);
+
+
+/**/
+ //   echo(points);
     
     // create a polyhedron with a prism-shaped extension at the top and subtract a 
     // hollow sphere from it
@@ -166,9 +223,12 @@ let (abc = echo("i", i, "countDiff", countDiff))
 
 /*
     polyhedron(points, faces, convexity = 10);    
+//    polyhedron(concat(points, [[0, 0, -_edgeRadius]]), faces, convexity = 10);
+
 /**/
     difference() {
         polyhedron(points, faces, convexity = 10);
+        echo("test");
         translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality * 2);
     }
 /*
@@ -177,6 +237,13 @@ let (abc = echo("i", i, "countDiff", countDiff))
         translate([50, 0, 0]) cube(20);
     }
 /**/
+
+/*
+union() {
+    translate([50, 0, 0]) cube(20);
+    translate([0, 50, 0]) cube(20);
+}
+*/
 }
 
 /*************************************
@@ -265,7 +332,7 @@ for (phi = [0: angleStep: ARMS * angleStep - 1])
         [for (i = [0: 1: armSteps - 1])
             let (phi2 = armStartAngle + i * armAngleStep)
             [
-                armX + rK * cos(phi2),
+                checkAndSetToZero(armX + rK * cos(phi2)),
                 checkAndSetToZero(armY + rK * sin(phi2))
             ]
         ],
@@ -275,7 +342,7 @@ for (phi = [0: angleStep: ARMS * angleStep - 1])
             // center is outside, thus need to go clockwise
             let (phi2 = notchStartAngle - i * notchAngleStep)
             [
-                notchX + rN * cos(phi2),
+                checkAndSetToZero(notchX + rN * cos(phi2)),
                 checkAndSetToZero(notchY + rN * sin(phi2))
             ]
         ]
@@ -300,6 +367,7 @@ function bottomEdgeLayer(points, layerN) =
     
     // horizontal distance of the current layer from the outer edge
     let (horDist = _edgeRadius * (1 - cos(angle)))
+
 
     // (x, y) - points of the current layer, as offset from the outmost edge
     let (layerPoints = polyEliminatedIntersections(
@@ -404,6 +472,7 @@ function polyEliminatedIntersections(points) =
 
     // find last point that is closest to the center, this must be the middle
     // of the notch before (ccw) the first tip
+    
     let (startIndexTemp = closestToCenter(points))
     // always use the first arm
     let (startIndex = startIndexTemp % n + (ARMS - 1) * n)    
@@ -463,13 +532,16 @@ i == len(points) - 1
     :
     let (p1 = points[i])
     let (p2 = points[i + 1])
-    p2.y < 0
+    checkAndSetToZero(p2.y) < 0
         // line (p1, p2) belongs to the poly, add the second point and go on
         ? pPFA_(points, i + 1, concat(result, [p2]))
         // the second point is on the other side of the x-axis,
         // we add the intersection of the line (p1, p2) with the x-axis to the result 
         // and leave
-        : concat(result, [[ p1.x - p1.y * (p2.x - p1.x) / (p2.y - p1.y), 0]])
+        : concat(result, [[
+            checkAndSetToZero(p1.x - p1.y * (p2.x - p1.x) / (p2.y - p1.y)),
+            0
+        ]])
 ;
 
 // in a list of points finds the point closest to the center
@@ -528,7 +600,7 @@ for (i = [0: 1: n - 1])
 
     // offset point
     [
-        p.x + l * bis.x,
+        checkAndSetToZero(p.x + l * bis.x),
         checkAndSetToZero(p.y + l * bis.y)
     ]
 ];
@@ -542,11 +614,16 @@ function rotatePointsAroundZAxis(points, angle) =
 
 // rotates the given point around the z axis by the angle
 function rotatePointAroundZAxis(point, angle) =
-    [
+    let (pTemp = [
         [cos(angle), -sin(angle)],
         [sin(angle),  cos(angle)]
     ]
-    * point
+    * point)
+    [
+        checkAndSetToZero(pTemp.x),
+        checkAndSetToZero(pTemp.y),
+        pTemp.z
+    ]
 ;
 
 /*******************

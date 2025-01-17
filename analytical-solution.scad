@@ -1,5 +1,7 @@
 ARMS = 5;
 
+SHAPE = "flat"; // [ "rounded", "flat" ]
+
 // knobDiameter
 _knobDiameter = 40;
 
@@ -12,7 +14,7 @@ _quality = ceil(_q / (ARMS * 2)) * ARMS * 2;
 echo("quality", _quality);
 
 // armPitch
-_armPitch = 2;
+_armPitch = 1.5;
 
 // notchRatio
 _notchRatio = 4;
@@ -25,6 +27,9 @@ _topRadius = 40;
 // TODO: calculate from the dimensions of the knob (e. g. height of the screw head)
 _heightOffset = _topRadius - 12;
 
+// TODO: calculate from screw dimensions
+_knobBodyHeight = 8;
+
 // radius of the rounded edge
 _edgeRadius = 2;
 
@@ -34,6 +39,7 @@ elTemp = round(_quality * _edgeRadius / _knobDiameter);
 _edgeLayerCount = elTemp >= 2 ? elTemp : 2;
 
 // make that thing
+//render()
 translate([0, 0, _edgeRadius]) color("gold") knobBody();
 
 // creates the body
@@ -48,131 +54,139 @@ module knobBody() {
 
     // layers of the top rounded edge plus an elevated copy of the last
     // layer to allow for subtracting a hollow sphere to make the rounding
-    // TODO: make the rounding by creating layers
-    layersTemp = edgeLayers(kb);
-    lastLayer = layersTemp[len(layersTemp) - 1];
-    topLayer = [[
-        for (i = [0: len(lastLayer) - 1])
-            [lastLayer[i].x, lastLayer[i].y, 20]
-    ]];
+    topEdgeLayers = topEdgeLayersRound(kb);
     
-    // list of all layers, each layer is itself a list of 3D points
-    layers = concat(bottomEdgeLayers, layersTemp, topLayer);
+    // eleveated layer if top surface is rounded
+    elevatedTopLayer = SHAPE == "rounded"
+        ? let (lastLayer = topEdgeLayers[len(topEdgeLayers) - 1])
+    
+        [[
+            for (i = [0: len(lastLayer) - 1])
+                [lastLayer[i].x, lastLayer[i].y, 20]
+        ]]
+        : [];
 
+    // list of all layers, each layer is itself a list of 3D points
+    layers = concat(bottomEdgeLayers, topEdgeLayers, elevatedTopLayer);
+    
     // all points in a flat list for polyhedron
     points = flattenInnerList(layers);
     
-    // create the faces from bottom to top in three steps:
-    // one face defined by the bottom layer
-    // n faces defined by following layers
-    // one face defined by the top layer
-    // TODO: split into functions
-    // TODO: top / bottom layers with less than three points are not handled yet
-    // (towards a general solution). The basic principle is already implemented,
-    // we probably just need to test for the number of points in the first and last
-    // layer and adjust the loops accordingly
-    faces = concat (
-        // bottom face: points of the first layer ccw
-        // double square brackets: concat unfolds for whatever reason
-        [[ for (i = [0: len(layers[0]) - 1]) i ]],
-
-        // layers of the sides along the z axis
-        [
-            // -2: there is one layer of side faces less than layers of points
-            for (i = [0: len(layers) - 2])
-                let (count = len(layers[i]))
-                let (nextCount = len(layers[i + 1]))
-                
-                // check if the next layer has the same number of points
-                let (countDiff = nextCount - count)
-
-                let (start = firstPointIndex(layers, i))
-                let (pts =
-                countDiff == 0 ?
-                    // layers have the same number of points, make squares
-                    // TODO: towards a general solution: if the layers are twisted 
-                    // against each other this step might utilize the closestToPoint function
-                    // make a square, go clockwise from the bottom left point
-                    [for (j = [start: start + count - 1]) [
-                        j,
-                        j + count,
-                        (j - start + 1) % count + start + count,
-                        (j - start + 1) % count + start
-                    ]]
-                :
-                let (nextLayer = layers[i + 1])
-                countDiff < 0 ?
-                    // layer has more points than the layer above
-                    // for every point of this layer find the closest point in the layer 
-                    // above, easier than messing around with indizes of deleted points 
-                    // and a more general solution
-                    let (closestPoints =
-                        [ for (j = [0: count - 1])
-                            closestToPoint(nextLayer, layers[i][j]) + start + count
-                        ])
-
-                    // if for two neighboring points of this layer the closest points
-                    // in the layer above
-                    // #1: are the same: make a triangle
-                    // #2: are neighbors: make a square
-                    // #3: have another point (cpn) inbetween: make a triangle AND a square
-                    flattenInnerList(
-                    [for (j = [start: start + count - 1])
-                        let (cp = closestPoints[j - start])
-                        // the point after the cp
-                        let (cpn = (cp - start - count + 1) % nextCount + start + count)
-                        let (next = (j - start + 1) % count + start)
-                        // the cp of the next point in this layer
-                        let (cpNext = closestPoints[next - start])
- 
-                        cp == cpNext
-                            ? [[ j, cp, next ]]
-                        : cpNext == cpn
-                            ? [[ j, cp, cpNext, next]]
-                        : [[j, cp, cpn], [j, cpn, cpNext, next]]
-                    ])
-                :
-                    // layer has fewer points than the layer above
-                    // use the same procedure as before but go along the layer above 
-                    // instead of along this layer
-                    let (closestPoints =
-                        [ for (j = [0: nextCount - 1])
-                            closestToPoint(layers[i], nextLayer[j]) + start
-                        ])
-
-                    let (startNext = start + count)
-                    flattenInnerList(
-                    [for (j = [startNext: startNext + nextCount - 1])
-                        let (cp = closestPoints[j - startNext])
-                        let (cpn = (cp - start + 1) % count + start)
-                        let (next = (j - startNext + 1) % nextCount + startNext)
-                        let (cpNext = closestPoints[next - startNext])
-
-                        cp == cpNext
-                            ? [[ j, next, cp ]]
-                        : cpNext == cpn
-                            ? [[ j, next, cpNext, cp]]
-                        : [[j, cpn, cp], [j, next, cpNext, cpn]]
-                    ])
-                )
-                // flatten the list
-                each pts
-        ],
-
-        // top face: points of the last layer clockwise
-        let (start = firstPointIndex(layers, len(layers) - 1))
-        let (end = len(points) -  1)
-        [[ for (i = [end: -1: start]) i ]]
-    );
+    faces = createFaces(layers);
 
     // create a polyhedron with a prism-shaped extension at the top and subtract a 
     // hollow sphere from it
     // TODO: calculate the thickness of the hollow sphere based on the knob's size
     difference() {
         polyhedron(points, faces, convexity = 10);
-        translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality);
+        if (SHAPE == "rounded") {
+            translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality);
+        }
     }
 }
+
+// create the faces from bottom to top in three steps:
+// one face defined by the bottom layer
+// n faces defined by following layers
+// one face defined by the top layer
+// TODO: split into functions
+// TODO: top / bottom layers with less than three points are not handled yet
+// (towards a general solution). The basic principle is already implemented,
+// we probably just need to test for the number of points in the first and last
+// layer and adjust the loops accordingly
+function createFaces(layers) = concat (
+    // bottom face: points of the first layer ccw
+    // double square brackets: concat unfolds for whatever reason
+    [[ for (i = [0: len(layers[0]) - 1]) i ]],
+
+    // layers of the sides along the z axis
+    [
+        // -2: there is one layer of side faces less than layers of points
+        for (i = [0: len(layers) - 2])
+            let (count = len(layers[i]))
+            let (nextCount = len(layers[i + 1]))
+            
+            // check if the next layer has the same number of points
+            let (countDiff = nextCount - count)
+
+            let (start = firstPointIndex(layers, i))
+            let (pts =
+            countDiff == 0 ?
+                // layers have the same number of points, make squares
+                // TODO: towards a general solution: if the layers are twisted 
+                // against each other this step might utilize the closestToPoint function
+                // make a square, go clockwise from the bottom left point
+                [for (j = [start: start + count - 1]) [
+                    j,
+                    j + count,
+                    (j - start + 1) % count + start + count,
+                    (j - start + 1) % count + start
+                ]]
+            :
+            let (nextLayer = layers[i + 1])
+            countDiff < 0 ?
+                // layer has more points than the layer above
+                // for every point of this layer find the closest point in the layer 
+                // above, easier than messing around with indizes of deleted points 
+                // and a more general solution
+                let (closestPoints =
+                    [ for (j = [0: count - 1])
+                        closestToPoint(nextLayer, layers[i][j]) + start + count
+                    ])
+
+                // if for two neighboring points of this layer the closest points
+                // in the layer above
+                // #1: are the same: make a triangle
+                // #2: are neighbors: make a square
+                // #3: have another point (cpn) inbetween: make a triangle AND a square
+                flattenInnerList(
+                [for (j = [start: start + count - 1])
+                    let (cp = closestPoints[j - start])
+                    // the point after the cp
+                    let (cpn = (cp - start - count + 1) % nextCount + start + count)
+                    let (next = (j - start + 1) % count + start)
+                    // the cp of the next point in this layer
+                    let (cpNext = closestPoints[next - start])
+
+                    cp == cpNext
+                        ? [[ j, cp, next ]]
+                    : cpNext == cpn
+                        ? [[ j, cp, cpNext, next]]
+                    : [[j, cp, cpn], [j, cpn, cpNext, next]]
+                ])
+            :
+                // layer has fewer points than the layer above
+                // use the same procedure as before but go along the layer above 
+                // instead of along this layer
+                let (closestPoints =
+                    [ for (j = [0: nextCount - 1])
+                        closestToPoint(layers[i], nextLayer[j]) + start
+                    ])
+
+                let (startNext = start + count)
+                flattenInnerList(
+                [for (j = [startNext: startNext + nextCount - 1])
+                    let (cp = closestPoints[j - startNext])
+                    let (cpn = (cp - start + 1) % count + start)
+                    let (next = (j - startNext + 1) % nextCount + startNext)
+                    let (cpNext = closestPoints[next - startNext])
+
+                    cp == cpNext
+                        ? [[ j, next, cp ]]
+                    : cpNext == cpn
+                        ? [[ j, next, cpNext, cp]]
+                    : [[j, cpn, cp], [j, next, cpNext, cpn]]
+                ])
+            )
+            // flatten the list
+            each pts
+    ],
+
+    // top face: points of the last layer clockwise
+    let (start = firstPointIndex(layers, len(layers) - 1))    
+    let (end = start + len(layers[len(layers) - 1]) - 1)
+    [[ for (i = [end: -1: start]) i ]]
+);
 
 /*************************************
  * knob related functions and modules
@@ -311,15 +325,15 @@ function bottomEdgeLayer(points, layerN) =
 // [ [l0p0, l0p1, ..., l0pn-1], ... [lmp0, lmp1, ..., lmpn-1] ]
 // due to self intersections appearing when offsetting the outline, the layers
 // may have different numbers of points (the higher the less points)
-function edgeLayers(points) =
+function topEdgeLayersRound(points) =
 [
     for (i = [0: _edgeLayerCount - 1])            
-         edgeLayer(points, i)
+         topEdgeLayerRound(points, i)
 ];
 
 // returns a list with the points of layer layerN in ccw order seen from above
 // points: outer limit of the knob
-function edgeLayer(points, layerN) =
+function topEdgeLayerRound(points, layerN) =
     // angle of this layer's edge rounding
     // we have one angle step less than the number of edge layers:
     // layer 0 is at 0 degrees (horizontal)
@@ -342,14 +356,16 @@ function edgeLayer(points, layerN) =
     ]
 ;
 
-function heightAtEdge(p, angle) =
+function heightAtTopEdge(p, angle) =
     heightAtTop(p) - _edgeRadius * (1 - sin(angle));
 
 // sets the z value of the point to the according height (rounded edge)
-function pointHeightEdge(p, angle) = [p.x, p.y, heightAtEdge(p, angle)];
+function pointHeightEdge(p, angle) = [p.x, p.y, heightAtTopEdge(p, angle)];
 
 function heightAtTop(p) =
-    sqrt(_topRadius^2 - norm([p.x, p.y])^2) - _heightOffset;
+    SHAPE == "rounded"
+    ? sqrt(_topRadius^2 - norm([p.x, p.y])^2) - _heightOffset
+    : _knobBodyHeight - _edgeRadius;
 
 // sets the z value of the point to the according height (rounded top surface)
 function pointHeightTop(p) = [p.x, p.y, heightAtTop(p)];

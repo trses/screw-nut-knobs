@@ -1,255 +1,46 @@
-/**
- * Creates handles for hexagon head screws, Allen / Inbus screws and hexagonal nuts.
- * Various parameters can be controlled:
- * SIZE: M4, M5, M6, M8, the arrays can be extended for further sizes
- * TYPE: knob for hex nut / screw, with or without hub, allen screw with lockhub
- * SHAPE: flat or rounded top
- * ARMS: number of "arms" of the star shaped knob
- * QUALITY: smoothness of the rendered stl (related but not equal to OpenSCAD $fn value)
- *
- * A lockhub is a hub with a cutout for a hex nut. There is always a lockhub for Allen /
- * Inbus screws because the screw must be countered with a lock nut in order to be
- * tightened. This type of lockhub cannot be part of the knob for hex screws in the 
- * first place because the screw cannot be turned in the knob in order to tighten it
- * against the lock nut. Thus, knobs for hex screws have a hub with just a cylindrical
- * hole for the threaded shaft. This is usually not critical since the screw is pulled
- * into the knob anyway when tightened.
- * If a hex screw still needs to be secured in the knob permanently, the knob can be
- * printed without a hub and a lockhub can be printed separately, which is then used like
- * a lock nut.
- *
- * Note, that further values, e. g. distance and size of the arms, depth
- * of the recesses (notches), radius of the rounded edge, and the size of the
- * hub can be modified in the source code.
- *
- * All dimensions in mm.
- *
- * License: CC BY-NC-SA 4.0
- *          Creative Commons 4.0 Attribution — Noncommercial — Share Alike
- *          https://creativecommons.org/licenses/by-nc-sa/4.0/
- *
- * Author: Thomas Richter
- * Contact: mail@thomas-richter.info
- */
-
-/*****************************************
- * START PARAMETERS
- * change for 
- * - different sizes
- * - type of knob to be rendered (for nut or screw)
- * - shape of knob (rounded or flat top)
- * - number of arms
- * - rendering quality
- *****************************************/
-
-/* [Parameters:] */
-// size of the metric screw / nut or free: if you select "free" customize the detailed values in the Dimensions Tab below
-SIZE = "M8"; // [M4, M5, M6, M8, free]
-
-// TYPE possible values:
-// - hex: make a knob with hub for a hex nut or screw
-// - hexnohub : make a knob without hub hub for a hex nut or screw (if you want to use a lockhub)
-// - allen: make a knob with hub for an Allen screw with lock nut in the hub
-// - inbus: make a knob with hub for an Allen screw with lock nut in the hub, is the same as allen, convenience option for German users
-// - lockhub: make a standalone hub with a cutout for a nut. This can be used as a lock nut for screwx knobs
-// what should be made
-TYPE = "hex"; // [hex, allen, inbus, hexnohub, lockhub]
-
-// Caution: the rounded top makes a difference of several minutes in rendering time
-// M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
-// shape of the top surface (rounded is very slow, up to several minutes)
-SHAPE = "rounded"; // [flat, rounded]
-
-// number of arms
 ARMS = 5;
 
-// Diameter of the knob in relation to the screw diameter
-DIAMETER_RATIO = 7; // [5 : 15]
+SHAPE = "flat"; // [ "rounded", "flat" ]
 
-// 360 gives a smooth finish
-// The higher the smoother the finish, the higher the computing time. Use very small values for a low poly look. Very high values probably only make sense for very large knobs (100mm diameter and above)
-QUALITY = 360; // [24 : 1800]
+// knobDiameter
+_knobDiameter = 40;
 
-// The values in the Dimensions tab have only to be customized if you choose the SIZE value "free"
-/* [Dimensions:] */
-THREAD_DIAMETER = 8.0; // .01
-
-// Attention! This NOT the wrench size but the diameter of the head measured across the corners
-HEX_SCREW_NUT_HEAD_DIAMETER_ACROSS_CORNERS = 14.38; // .01
-
-HEX_SCREW_NUT_HEIGHT = 6.8; // .01
-
-ALLEN_HEAD_DIAMETER = 13.0; // .01
-
-ALLEN_HEAD_HEIGHT = 8.0; // .01
-
-/*********** END PARAMETERS ***********/
-
-/*****************************************
- * START CALCULATED VALUES
- * change to get differently shaped knobs
- *****************************************/
-
- /* [Hidden] */
- 
- /**
- * Measures of metric screws and nuts according to
- * ISO 4017 / DIN 933 - hexagonal head screws
- * ISO 4032 / DIN 934 - hexagonal nuts
- * ISO 4762 / DIN 921 - Allen screws
- *
- * License: CC BY-NC-SA 4.0
- *          Creative Commons 4.0 Attribution — Noncommercial — Share Alike
- *          https://creativecommons.org/licenses/by-nc-sa/4.0/
- *
- * Author: Thomas Richter
- * Contact: mail@thomas-richter.info
- */
-
-// order of parameters, names from DIN / ISO tables in (brackets)
-// size, screwDiameter (d1), screwHeadDiameter (e), screwHeadHeight (k / m), allenHeadDiameter (dk), allenHeadHeight (k)
-//
-// Note that the screwHeadDiameter is the largest dimension, NOT the wrench size.
-// In DIN and ISO dimension tables, this dimension is usually designated as e.
-//     ___
-//    /   \
-//    \___/
-//    --e--
-// dimensions from DIN 933 / ISO 4017 and DIN 912 / ISO 4762 (inbus / allen)
-// The height dimension (k / m) is parameter m from DIN 934 / ISO 4032 for nuts.
-// Nuts are a little higher than screw heads, thus screws will sit a little deeper.
-// Change this value if necessary.
-// [size, d1, e, k / m, inbus dk, inbus k]
-screws = [
-    [ "M4",  4,  7.66,  3.2,  7.0,  4],
-    [ "M5",  5,  8.79,  4.7,  8.5,  5],
-    [ "M6",  6, 11.05,  5.2, 10.0,  6],
-    [ "M8",  8, 14.38,  6.8, 13.0,  8],
-    ["M10", 10, 18.90,  8.0, 16.0, 10],
-    ["M12", 12, 21.10, 10.0, 18.0, 12],
-    ["M14", 14, 24.49, 11.0, 21.0, 14],
-    ["M16", 16, 26.75, 13.0, 24.0, 16],
-    
-    // US dimensions according to ASME B18.2.1, ASME B18.2.2 
-    // name, thread size, head diameter across corners (e), head height (h), allen head diameter, allen head height]
-    // ["5/32"]
-    // ["3/16"]
-    // ["1/4",  1/4, 0.505, 5/32, 3/8, 1/4]
-    // ["5/16", 5/16, 0.577, 7/32]
-];
-
-// get the measures from the array or from the Customizer view
-screw = SIZE != "free"
-    ? selectScrew(SIZE)
-    : [
-        "free",
-        THREAD_DIAMETER,
-        HEX_SCREW_NUT_HEAD_DIAMETER_ACROSS_CORNERS,
-        HEX_SCREW_NUT_HEAD_HEIGHT,
-        ALLEN_HEAD_DIAMETER,
-        ALLEN_HEAD_HEIGHT
-    ];
+// number of segments along the circumference
+_q = 360;
 
 // _quality must be a multiple of ARMS * 2 to have the body rotationally symmetrical
 // next larger number divisible by 2 * ARMS
-_quality = ceil(QUALITY / (ARMS * 2)) * ARMS * 2;
+_quality = ceil(_q / (ARMS * 2)) * ARMS * 2;
+echo("quality", _quality);
 
-// smoothness of the knob's edges. The hub's radius is half of this size to
-// compensate for oversized holes in the part this knob is screwed to
-_edgeRadius = 2;
+// armPitch
+_armPitch = 1.5;
 
-// Length of the screw shank that should be inside the knob
-// note: the height of the hub is added to this value so that the actual protrusion
-// is larger
-protrusion = screw[1];
+// notchRatio
+_notchRatio = 4;
 
-screwDiameter = screw[1];
-screwHeadDiameter = TYPE == "allen" || TYPE == "inbus" ? screw[4] : screw[2];
-screwHeadHeight = TYPE == "allen" || TYPE == "inbus" ? screw[5] : screw[3];
-nutDiameter = screw[2];
-
-// size of the knob, can alternatively be set to a constant value
-_knobDiameter = screwDiameter * DIAMETER_RATIO;
-
-// pitch of the arms: a pitch of one means that one arm radius ist between two arms, a pitch of two means that two arm radii are between two arms. Since the circumference is constant this setting controls the radius of the arms: the larger the pitch, the smaller the arms. Sensible Values are 1, 2, 3
-_armPitch = 1;
-
-// ratio of arm diameter to notch diameter
-// 2 means, notches have twice the radius of arms.
-// The higher the notchRatio is, the flatter the notches are. Sensible values are between 2 and 5
-_notchRatio = 2;
-
-// TODO: rounded top, bottom edge radius
-_knobBodyHeight = protrusion + screwHeadHeight - _edgeRadius;
-
-// how much the top rounding stands above the top edge
-topRoundingHeight = SHAPE == "flat" ? 0 : _knobDiameter / 12;
-
-_topRadius = topRoundingHeight != 0
-    ?
-    // subtract a hollow sphere from the knob body
-    // radius of the top rounding when viewing from above (parallel to the knob's circumference)
-    let (rTopRoundingArch = _knobDiameter / 2 - _edgeRadius)
-    // distance from the center of the hollow sphere to the knob's surface without the rounding
-    let (distCenterSurface = (rTopRoundingArch^2 - topRoundingHeight^2) / (2 * topRoundingHeight))
-
-    distCenterSurface + topRoundingHeight
-
-    : 0;
+// radius of the top surface's rounding
+// TODO: calculate from a given offset (height above the flat surface)
+_topRadius = 40;
 
 // z-offset to compensate for the rounded top surface beeing in the origin
 // TODO: calculate from the dimensions of the knob (e. g. height of the screw head)
-_heightOffset = _topRadius - _knobBodyHeight;
+_heightOffset = _topRadius - 12;
 
-// size of the hub
-_hubHeight = screwDiameter * 1.2;
+// TODO: calculate from screw dimensions
+_knobBodyHeight = 8;
 
-// the hub has at least a wall thickness at the nut of the thread's radius
-_hubDiameter = screwHeadDiameter + screwDiameter;
+// radius of the rounded edge
+_edgeRadius = 2;
 
 // number of layers of the rounded edge, must at least be two
 // note: layers of points, one larger than the resulting numer of layers of faces
 elTemp = round(_quality * _edgeRadius / _knobDiameter);
 _edgeLayerCount = elTemp >= 2 ? elTemp : 2;
 
-// configure the knob
-makeHub = TYPE == "hex" || TYPE == "allen" || TYPE == "inbus";
-
-// make the thing
-// parameter slot for future improvements
-render() color("gold") 
-if (TYPE == "lockhub") {
-    hub(nut = true, slot = false);
-} else {
-    knob(makeHub);
-}
-
-module knob(makeHub = false) {
-
-    difference() {
-        translate([0, 0, _edgeRadius]) knobBody();
-        
-        // cut hole for screw shaft
-        cylinder(h = _knobBodyHeight, d = screwDiameter, $fn = 72);
-
-        // for allen screws make a circular cutout
-        // for  hex screws and nuts make a hexagonal cutout
-        edges = TYPE == "allen" || TYPE == "inbus" ? _quality : 6;
-        
-        // position of cutout with respect to the shape
-        // TODO: remove after fixing _knobBodyHeight optimisation
-        cutOffset = SHAPE == "rounded" ? _edgeRadius : 0;
-        
-        translate([0, 0, _knobBodyHeight - screwHeadHeight + cutOffset])
-            cylinder(h = screwHeadHeight, d = screwHeadDiameter, $fn = edges);
-    }
-    
-    // make a hub
-    if (makeHub) {
-        // if the knob is for allen screws the hub has a cutout for the lock nut
-        rotate([180, 0, 0]) hub(nut = TYPE == "allen" || TYPE == "inbus");
-    }
-}
+// make that thing
+//render()
+translate([0, 0, _edgeRadius]) color("gold") knobBody();
 
 // creates the body
 module knobBody() {
@@ -271,7 +62,7 @@ module knobBody() {
     
         [[
             for (i = [0: len(lastLayer) - 1])
-                [lastLayer[i].x, lastLayer[i].y, _knobBodyHeight]
+                [lastLayer[i].x, lastLayer[i].y, 20]
         ]]
         : [];
 
@@ -289,46 +80,113 @@ module knobBody() {
     difference() {
         polyhedron(points, faces, convexity = 10);
         if (SHAPE == "rounded") {
-            translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + _knobBodyHeight, _topRadius, $fn = _quality);
+            translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + 20, _topRadius, $fn = _quality);
         }
     }
 }
 
-module hub(nut = false, slot = false) {
-    eR = _edgeRadius / 2;
-    q = _quality / 4;
-    difference() {
-        minkowski() {
-            sphere(eR, $fn = q);
+// create the faces from bottom to top in three steps:
+// one face defined by the bottom layer
+// n faces defined by following layers
+// one face defined by the top layer
+// TODO: split into functions
+// TODO: top / bottom layers with less than three points are not handled yet
+// (towards a general solution). The basic principle is already implemented,
+// we probably just need to test for the number of points in the first and last
+// layer and adjust the loops accordingly
+function createFaces(layers) = concat (
+    // bottom face: points of the first layer ccw
+    // double square brackets: concat unfolds for whatever reason
+    [[ for (i = [0: len(layers[0]) - 1]) i ]],
 
-            // -eR: compensate for the enlargement by the minkowski sum
-            cylinder(h = _hubHeight - eR, d = _hubDiameter - 2 * eR, $fn = q);
-        }
-        // cut hole for the screw
-        cylinder(h = _hubHeight + eR * 2, d = screwDiameter, $fn = q);
-
-        // cut off excessive height from minkowski sum
-        translate([0, 0, -eR])
-            cylinder(h = eR, d = _hubDiameter + eR * 2, $fn = q);
-
-        if (nut) {
-            nutPosZ = slot ? 0 : _hubHeight - screwHeadHeight - 1;
-        
-            // cut off hexagonal hole for the securing nut
-            // -1 / +1: additional depth for printing tolerances
-            translate([0, 0, nutPosZ])
-                cylinder(h = screwHeadHeight + 1, d = nutDiameter, $fn = 6);
+    // layers of the sides along the z axis
+    [
+        // -2: there is one layer of side faces less than layers of points
+        for (i = [0: len(layers) - 2])
+            let (count = len(layers[i]))
+            let (nextCount = len(layers[i + 1]))
             
-            // cut off slot to insert the nut sideways
-            if (slot) {
-                translate([nutDiameter / 2, 0, 0])
-                    // use a second cylinder to avoid calculating the width of the slot
-                    cylinder(h = nutHeight + 1, d = nutDiameter, $fn = 6);
-            }
-        }
-    }
-}
+            // check if the next layer has the same number of points
+            let (countDiff = nextCount - count)
 
+            let (start = firstPointIndex(layers, i))
+            let (pts =
+            countDiff == 0 ?
+                // layers have the same number of points, make squares
+                // TODO: towards a general solution: if the layers are twisted 
+                // against each other this step might utilize the closestToPoint function
+                // make a square, go clockwise from the bottom left point
+                [for (j = [start: start + count - 1]) [
+                    j,
+                    j + count,
+                    (j - start + 1) % count + start + count,
+                    (j - start + 1) % count + start
+                ]]
+            :
+            let (nextLayer = layers[i + 1])
+            countDiff < 0 ?
+                // layer has more points than the layer above
+                // for every point of this layer find the closest point in the layer 
+                // above, easier than messing around with indizes of deleted points 
+                // and a more general solution
+                let (closestPoints =
+                    [ for (j = [0: count - 1])
+                        closestToPoint(nextLayer, layers[i][j]) + start + count
+                    ])
+
+                // if for two neighboring points of this layer the closest points
+                // in the layer above
+                // #1: are the same: make a triangle
+                // #2: are neighbors: make a square
+                // #3: have another point (cpn) inbetween: make a triangle AND a square
+                flattenInnerList(
+                [for (j = [start: start + count - 1])
+                    let (cp = closestPoints[j - start])
+                    // the point after the cp
+                    let (cpn = (cp - start - count + 1) % nextCount + start + count)
+                    let (next = (j - start + 1) % count + start)
+                    // the cp of the next point in this layer
+                    let (cpNext = closestPoints[next - start])
+
+                    cp == cpNext
+                        ? [[ j, cp, next ]]
+                    : cpNext == cpn
+                        ? [[ j, cp, cpNext, next]]
+                    : [[j, cp, cpn], [j, cpn, cpNext, next]]
+                ])
+            :
+                // layer has fewer points than the layer above
+                // use the same procedure as before but go along the layer above 
+                // instead of along this layer
+                let (closestPoints =
+                    [ for (j = [0: nextCount - 1])
+                        closestToPoint(layers[i], nextLayer[j]) + start
+                    ])
+
+                let (startNext = start + count)
+                flattenInnerList(
+                [for (j = [startNext: startNext + nextCount - 1])
+                    let (cp = closestPoints[j - startNext])
+                    let (cpn = (cp - start + 1) % count + start)
+                    let (next = (j - startNext + 1) % nextCount + startNext)
+                    let (cpNext = closestPoints[next - startNext])
+
+                    cp == cpNext
+                        ? [[ j, next, cp ]]
+                    : cpNext == cpn
+                        ? [[ j, next, cpNext, cp]]
+                    : [[j, cpn, cp], [j, next, cpNext, cpn]]
+                ])
+            )
+            // flatten the list
+            each pts
+    ],
+
+    // top face: points of the last layer clockwise
+    let (start = firstPointIndex(layers, len(layers) - 1))    
+    let (end = start + len(layers[len(layers) - 1]) - 1)
+    [[ for (i = [end: -1: start]) i ]]
+);
 
 /*************************************
  * knob related functions and modules
@@ -532,109 +390,6 @@ module hollowSphere(outerRadius, innerRadius) {
 /****************************************************************
  * more or less general functions and modules to handle polygons
  ****************************************************************/
-
-// create the faces from bottom to top in three steps:
-// one face defined by the bottom layer
-// n faces defined by following layers
-// one face defined by the top layer
-// TODO: split into functions
-// TODO: top / bottom layers with less than three points are not handled yet
-// (towards a general solution). The basic principle is already implemented,
-// we probably just need to test for the number of points in the first and last
-// layer and adjust the loops accordingly
-function createFaces(layers) = concat (
-    // bottom face: points of the first layer ccw
-    // double square brackets: concat unfolds for whatever reason
-    [[ for (i = [0: len(layers[0]) - 1]) i ]],
-
-    // layers of the sides along the z axis
-    [
-        // -2: there is one layer of side faces less than layers of points
-        for (i = [0: len(layers) - 2])
-            let (count = len(layers[i]))
-            let (nextCount = len(layers[i + 1]))
-            
-            // check if the next layer has the same number of points
-            let (countDiff = nextCount - count)
-
-            let (start = firstPointIndex(layers, i))
-            let (pts =
-            countDiff == 0 ?
-                // layers have the same number of points, make squares
-                // TODO: towards a general solution: if the layers are twisted 
-                // against each other this step might utilize the closestToPoint function
-                // make a square, go clockwise from the bottom left point
-                [for (j = [start: start + count - 1]) [
-                    j,
-                    j + count,
-                    (j - start + 1) % count + start + count,
-                    (j - start + 1) % count + start
-                ]]
-            :
-            let (nextLayer = layers[i + 1])
-            countDiff < 0 ?
-                // layer has more points than the layer above
-                // for every point of this layer find the closest point in the layer 
-                // above, easier than messing around with indizes of deleted points 
-                // and a more general solution
-                let (closestPoints =
-                    [ for (j = [0: count - 1])
-                        closestToPoint(nextLayer, layers[i][j]) + start + count
-                    ])
-
-                // if for two neighboring points of this layer the closest points
-                // in the layer above
-                // #1: are the same: make a triangle
-                // #2: are neighbors: make a square
-                // #3: have another point (cpn) inbetween: make a triangle AND a square
-                flattenInnerList(
-                [for (j = [start: start + count - 1])
-                    let (cp = closestPoints[j - start])
-                    // the point after the cp
-                    let (cpn = (cp - start - count + 1) % nextCount + start + count)
-                    let (next = (j - start + 1) % count + start)
-                    // the cp of the next point in this layer
-                    let (cpNext = closestPoints[next - start])
-
-                    cp == cpNext
-                        ? [[ j, cp, next ]]
-                    : cpNext == cpn
-                        ? [[ j, cp, cpNext, next]]
-                    : [[j, cp, cpn], [j, cpn, cpNext, next]]
-                ])
-            :
-                // layer has fewer points than the layer above
-                // use the same procedure as before but go along the layer above 
-                // instead of along this layer
-                let (closestPoints =
-                    [ for (j = [0: nextCount - 1])
-                        closestToPoint(layers[i], nextLayer[j]) + start
-                    ])
-
-                let (startNext = start + count)
-                flattenInnerList(
-                [for (j = [startNext: startNext + nextCount - 1])
-                    let (cp = closestPoints[j - startNext])
-                    let (cpn = (cp - start + 1) % count + start)
-                    let (next = (j - startNext + 1) % nextCount + startNext)
-                    let (cpNext = closestPoints[next - startNext])
-
-                    cp == cpNext
-                        ? [[ j, next, cp ]]
-                    : cpNext == cpn
-                        ? [[ j, next, cpNext, cp]]
-                    : [[j, cpn, cp], [j, next, cpNext, cpn]]
-                ])
-            )
-            // flatten the list
-            each pts
-    ],
-
-    // top face: points of the last layer clockwise
-    let (start = firstPointIndex(layers, len(layers) - 1))    
-    let (end = start + len(layers[len(layers) - 1]) - 1)
-    [[ for (i = [end: -1: start]) i ]]
-);
 
 // eliminates the intersections from the given polygon
 // ATTENTION! This function is designed to be fast on the rotationally
@@ -844,12 +599,3 @@ function rotateList(list, n) =
 
 // flattens the inner lists of the given list
 function flattenInnerList(list) = [for (i = [0: len(list) - 1]) each list[i]];
-
-
-
-
-
-// selector functions to simplify the selection of the entities
-function selectFromDict(item, dict) = dict[search([item], dict)[0]];
-
-function selectScrew(size) = selectFromDict(size, screws);

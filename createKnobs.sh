@@ -15,8 +15,7 @@ do
     esac
 done
 
-#sizes=("M4" "M5" "M6" "M8")
-sizes=("M4" "M5" "M6" "M8" "M10" "M12" "M14" "M16")
+sizes=("M3" "M4" "M5" "M6" "M8" "M10" "M12" "M14" "M16")
 arms=(5 7 51)
 # hex, hexnohub, allen, inbus, lockhub
 types=("hex" "hexnohub" "allen")

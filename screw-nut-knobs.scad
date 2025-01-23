@@ -44,7 +44,7 @@
 
 /* [Parameters:] */
 // size of the metric screw / nut or free: if you select "free" customize the detailed values in the Dimensions Tab below
-SIZE = "M8"; // [M4, M5, M6, M8, free]
+SIZE = "M8"; // [M3, M4, M5, M6, M8, M10, M12, M14, M16, free]
 
 // TYPE possible values:
 // - hex: make a knob with hub for a hex nut or screw
@@ -121,6 +121,7 @@ ALLEN_HEAD_HEIGHT = 8.0; // .01
 // Change this value if necessary.
 // [size, d1, e, k / m, inbus dk, inbus k]
 screws = [
+    [ "M3",  3,  6.01,  2.4,  5.5,  3],
     [ "M4",  4,  7.66,  3.2,  7.0,  4],
     [ "M5",  5,  8.79,  4.7,  8.5,  5],
     [ "M6",  6, 11.05,  5.2, 10.0,  6],
@@ -130,12 +131,13 @@ screws = [
     ["M14", 14, 24.49, 11.0, 21.0, 14],
     ["M16", 16, 26.75, 13.0, 24.0, 16],
     
+    // TODO
     // US dimensions according to ASME B18.2.1, ASME B18.2.2 
     // name, thread size, head diameter across corners (e), head height (h), allen head diameter, allen head height]
     // ["5/32"]
     // ["3/16"]
-    // ["1/4",  1/4, 0.505, 5/32, 3/8, 1/4]
-    // ["5/16", 5/16, 0.577, 7/32]
+    // ["1/4",  1/4 * 25.4, 0.505, 5/32 * 25.4, 3/8 * 25.4, 1/4 * 25.4]
+    // ["5/16", 5/16 * 25.4, 0.577, 7/32 * 25.4]
 ];
 
 // get the measures from the array or from the Customizer view
@@ -154,10 +156,6 @@ screw = SIZE != "free"
 // next larger number divisible by 2 * ARMS
 _quality = ceil(QUALITY / (ARMS * 2)) * ARMS * 2;
 
-// smoothness of the knob's edges. The hub's radius is half of this size to
-// compensate for oversized holes in the part this knob is screwed to
-_edgeRadius = 2;
-
 // Length of the screw shank that should be inside the knob
 // note: the height of the hub is added to this value so that the actual protrusion
 // is larger
@@ -167,6 +165,10 @@ screwDiameter = screw[1];
 screwHeadDiameter = TYPE == "allen" || TYPE == "inbus" ? screw[4] : screw[2];
 screwHeadHeight = TYPE == "allen" || TYPE == "inbus" ? screw[5] : screw[3];
 nutDiameter = screw[2];
+
+// smoothness of the knob's edges. The hub's radius is half of this size to
+// compensate for oversized holes in the part this knob is screwed to
+_edgeRadius = screwDiameter / 4;
 
 // size of the knob, can alternatively be set to a constant value
 _knobDiameter = screwDiameter * DIAMETER_RATIO;

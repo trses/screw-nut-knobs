@@ -3,7 +3,16 @@
 
 # rendered models
 /printables
+/webapp/public/output
 *.stl
 
 # Apple misc
 .DS_Store
+
+# env vars
+*.env
+
+# libraries
+*node_modules
+/webapp/client/src/lib
+/webapp/public

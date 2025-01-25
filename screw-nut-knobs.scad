@@ -62,7 +62,7 @@ SHAPE = "rounded"; // [flat, rounded]
 ARMS = 5;
 
 // Diameter of the knob in relation to the screw diameter
-DIAMETER_RATIO = 7; // [5 : 15]
+DIAMETER_RATIO = 7; // [5 : 0.1 : 10]
 
 // 360 gives a smooth finish
 // The higher the smoother the finish, the higher the computing time. Use very small values for a low poly look. Very high values probably only make sense for very large knobs (100mm diameter and above)
@@ -95,13 +95,6 @@ ALLEN_HEAD_HEIGHT = 8.0; // .01
  * ISO 4017 / DIN 933 - hexagonal head screws
  * ISO 4032 / DIN 934 - hexagonal nuts
  * ISO 4762 / DIN 921 - Allen screws
- *
- * License: CC BY-NC-SA 4.0
- *          Creative Commons 4.0 Attribution — Noncommercial — Share Alike
- *          https://creativecommons.org/licenses/by-nc-sa/4.0/
- *
- * Author: Thomas Richter
- * Contact: mail@thomas-richter.info
  */
 
 // order of parameters, names from DIN / ISO tables in (brackets)
@@ -164,22 +157,26 @@ screwHeadDiameter = TYPE == "allen" || TYPE == "inbus" ? screw[4] : screw[2];
 screwHeadHeight = TYPE == "allen" || TYPE == "inbus" ? screw[5] : screw[3];
 nutDiameter = screw[2];
 
-// smoothness of the knob's edges. The hub's radius is half of this size to
-// compensate for oversized holes in the part this knob is screwed to
+// smoothness of the knob's edges. The radius of the hub's edge is half of this size
+// to compensate for oversized holes in the part this knob is screwed to
 _edgeRadius = screwDiameter / 4;
 
 // size of the knob, can alternatively be set to a constant value
 _knobDiameter = screwDiameter * DIAMETER_RATIO;
 
-// pitch of the arms: a pitch of one means that one arm radius ist between two arms, a pitch of two means that two arm radii are between two arms. Since the circumference is constant this setting controls the radius of the arms: the larger the pitch, the smaller the arms. Sensible Values are 1, 2, 3
+// pitch of the arms:
+// a pitch of one means that one arm radius ist between two arms
+// a pitch of two means that two arm radii are between two arms
+// Since the circumference is constant this setting controls the radius of the arms:
+// the larger the pitch, the slimmer the arms. Sensible values are 1, 2, 3
 _armPitch = 1;
 
 // ratio of arm diameter to notch diameter
 // 2 means, notches have twice the radius of arms.
-// The higher the notchRatio is, the flatter the notches are. Sensible values are between 2 and 5
+// The higher the notchRatio is, the shallower the notches are.
+// Sensible values are between 2 and 5
 _notchRatio = 2;
 
-// TODO: rounded top, bottom edge radius
 _knobBodyHeight = protrusion + screwHeadHeight - _edgeRadius;
 
 // how much the top rounding stands above the top edge
@@ -187,10 +184,10 @@ topRoundingHeight = SHAPE == "flat" ? 0 : _knobDiameter / 12;
 
 _topRadius = topRoundingHeight != 0
     ?
-    // subtract a hollow sphere from the knob body
+    // intersect a sphere with the knob body
     // radius of the top rounding when viewing from above (parallel to the knob's circumference)
     let (rTopRoundingArch = _knobDiameter / 2 - _edgeRadius)
-    // distance from the center of the hollow sphere to the knob's surface without the rounding
+    // distance from the center of the sphere to the knob's surface without the rounding
     let (distCenterSurface = (rTopRoundingArch^2 - topRoundingHeight^2) / (2 * topRoundingHeight))
 
     distCenterSurface + topRoundingHeight
@@ -198,7 +195,6 @@ _topRadius = topRoundingHeight != 0
     : 0;
 
 // z-offset to compensate for the rounded top surface beeing in the origin
-// TODO: calculate from the dimensions of the knob (e. g. height of the screw head)
 _heightOffset = _topRadius - _knobBodyHeight;
 
 // size of the hub
@@ -262,7 +258,7 @@ module knobBody() {
     bottomEdgeLayers = bottomEdgeLayers(kb);
 
     // layers of the top rounded edge plus an elevated copy of the last
-    // layer to allow for subtracting a hollow sphere to make the rounding
+    // layer to allow for intersecting with a sphere to make the rounding
     topEdgeLayers = topEdgeLayersRound(kb);
     
     // eleveated layer if top surface is rounded
@@ -552,9 +548,9 @@ function createFaces(layers) = concat (
             let (pts =
             countDiff == 0 ?
                 // layers have the same number of points, make squares
-                // TODO: towards a general solution: if the layers are twisted 
+                // order of vertices: clockwise from the bottom left point
+                // TODO: towards a general solution: if the layers are twisted
                 // against each other this step might utilize the closestToPoint function
-                // make a square, go clockwise from the bottom left point
                 [for (j = [start: start + count - 1]) [
                     j,
                     j + count,

@@ -44,7 +44,7 @@
 
 /* [Parameters:] */
 // size of the metric screw / nut or free: if you select "free" customize the detailed values in the Dimensions Tab below
-SIZE = "free"; // [M3, M4, M5, M6, M8, M10, M12, M14, M16, free]
+SIZE = "M8"; // [M3, M4, M5, M6, M8, M10, M12, M14, M16, free]
 
 // TYPE possible values:
 // - hex: make a knob with hub for a hex nut or screw

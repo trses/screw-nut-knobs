@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>prototype knb generator</title>
+    <link href="lib/bootstrap-5.3.3-dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="lib/stl_viewer/stl_viewer.min.js"></script>
+
+<script>
+    let stlViewer = undefined;
+
+    const init = () => {
+        // https://www.viewstl.com/plugin/
+        stlViewer = new StlViewer(document.getElementById('targetStl'), {models: []});
+
+        console.log(stlViewer);
+    };
+
+const onSubmitClicked = (event) => {
+    event.preventDefault();
+
+    const queryString = inputToQueryString();
+
+    getMesh(queryString);
+
+};
+
+const getMesh = async (queryString) => {
+    const url = `http://localhost:3000/api/v1/mesh${queryString}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+
+        // stl laden
+        stlViewer.clean();
+        stlViewer.add_model({filename: json.url});
+
+    } catch (error) {
+        console.error(error.message);
+    }
+};
+
+
+const inputToQueryString = () => {
+    const size = document.getElementById('SIZE').value;
+    const type = document.getElementById('TYPE').value;
+    const shape = document.getElementById('SHAPE').value;
+    const arms = document.getElementById('ARMS').value;
+    const diameterRatio = document.getElementById('DIAMETER_RATIO').value;
+    const quality = document.getElementById('QUALITY').value;
+
+    return `?SIZE=${size}&TYPE=${type}&SHAPE=${shape}&ARMS=${arms}&DIAMETER_RATIO=${diameterRatio}&QUALITY=${quality}`;
+};
+</script>
+
+</head>
+
+<body onload="init()">
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <form onsubmit="onSubmitClicked(event)">
+                <div class="mb-3">
+                    <label for="SIZE" class="form-label">SIZE</label>
+                    <select id="SIZE" class="form-select">
+                        <option value="M3" selected>M3</option>
+                        <option value="M4">M4</option>
+                        <option value="M5">M5</option>
+                        <option value="M6">M6</option>
+                        <option value="M8">M8</option>
+                        <option value="M10">M10</option>
+                        <option value="M12">M12</option>
+                        <option value="M14">M14</option>
+                        <option value="M16">M16</option>
+                      </select>
+                </div>
+                <div class="mb-3">
+                    <label for="TYPE" class="form-label">TYPE</label>
+                    <select id="TYPE" class="form-select">
+                        <option value="hex" selected>hex</option>
+                        <option value="allen">allen</option>
+                        <option value="inbus">inbus</option>
+                        <option value="hexnohub">hexnohub</option>
+                        <option value="lockhub">lockhub</option>
+                      </select>
+                </div>
+                <div class="mb-3">
+                    <label for="SHAPE" class="form-label">SHAPE</label>
+                    <select id="SHAPE" class="form-select">
+                        <option value="rounded" selected>rounded</option>
+                        <option value="flat">flat</option>
+                      </select>
+                </div>
+                <div class="mb-3">
+                    <label for="ARMS" class="form-label">ARMS</label>
+                    <input type="number" value="5" class="form-control" id="ARMS" min="3" max="101" step="1">
+                </div>
+                <div class="mb-3">
+                    <label for="DIAMETER_RATIO" class="form-label">DIAMETER_RATIO</label>
+                    <input type="number" value="6" class="form-control" id="DIAMETER_RATIO" min="5" max="10" step="0.1">
+                </div>
+                <div class="mb-3">
+                    <label for="QUALITY" class="form-label">QUALITY</label>
+                    <input type="number" value="180" class="form-control" id="QUALITY" min="24" max="720" step="1">
+                </div>
+                <button type="submit"
+                    class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+        <div class="col">
+
+            stl preview
+            <!--img id="targetImage" width="400" /-->
+
+            <div id="targetStl"></div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+
+</html>

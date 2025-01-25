@@ -167,8 +167,8 @@ const renderModel = (customOptions) => {
     
     const command = `${openScadBinaryFilePath} ${scadFilePath} ${scadOptions} ${customOptions}`;
 
-    const { exec } = require('child_process');
-    exec(command, (err, stdout, stderr) => {
+    const { execSync } = require('child_process');
+    execSync(command, (err, stdout, stderr) => {
         if (err) {
             // node couldn't execute the command
             return;

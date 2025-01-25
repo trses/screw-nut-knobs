@@ -44,7 +44,7 @@
 
 /* [Parameters:] */
 // size of the metric screw / nut or free: if you select "free" customize the detailed values in the Dimensions Tab below
-SIZE = "M8"; // [M3, M4, M5, M6, M8, M10, M12, M14, M16, free]
+SIZE = "free"; // [M3, M4, M5, M6, M8, M10, M12, M14, M16, free]
 
 // TYPE possible values:
 // - hex: make a knob with hub for a hex nut or screw
@@ -55,9 +55,7 @@ SIZE = "M8"; // [M3, M4, M5, M6, M8, M10, M12, M14, M16, free]
 // what should be made
 TYPE = "hex"; // [hex, allen, inbus, hexnohub, lockhub]
 
-// Caution: the rounded top makes a difference of several minutes in rendering time
-// M8 flat top: 11 seconds, M8 rounded top: 7 minutes on Apple M3 CPU
-// shape of the top surface (rounded is very slow, up to several minutes)
+// shape of the top surface
 SHAPE = "rounded"; // [flat, rounded]
 
 // number of arms
@@ -68,7 +66,7 @@ DIAMETER_RATIO = 7; // [5 : 15]
 
 // 360 gives a smooth finish
 // The higher the smoother the finish, the higher the computing time. Use very small values for a low poly look. Very high values probably only make sense for very large knobs (100mm diameter and above)
-QUALITY = 360; // [24 : 1800]
+QUALITY = 360; // [24 : 720]
 
 // The values in the Dimensions tab have only to be customized if you choose the SIZE value "free"
 /* [Dimensions:] */
@@ -147,7 +145,7 @@ screw = SIZE != "free"
         "free",
         THREAD_DIAMETER,
         HEX_SCREW_NUT_HEAD_DIAMETER_ACROSS_CORNERS,
-        HEX_SCREW_NUT_HEAD_HEIGHT,
+        HEX_SCREW_NUT_HEIGHT,
         ALLEN_HEAD_DIAMETER,
         ALLEN_HEAD_HEIGHT
     ];

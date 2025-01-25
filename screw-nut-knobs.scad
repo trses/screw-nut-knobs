@@ -219,7 +219,7 @@ makeHub = TYPE == "hex" || TYPE == "allen" || TYPE == "inbus";
 
 // make the thing
 // parameter slot for future improvements
-render() color("gold") 
+render() color("gold")
 if (TYPE == "lockhub") {
     hub(nut = true, slot = false);
 } else {
@@ -285,13 +285,12 @@ module knobBody() {
     
     faces = createFaces(layers);
 
-    // create a polyhedron with a prism-shaped extension at the top and subtract a 
-    // hollow sphere from it
-    // TODO: calculate the thickness of the hollow sphere based on the knob's size
-    difference() {
+    // create a polyhedron with a prism-shaped extension at the top and
+    // intersect it with a sphere representing the top rounding    
+    intersection() {
         polyhedron(points, faces, convexity = 10);
         if (SHAPE == "rounded") {
-            translate([0, 0, -_heightOffset]) hollowSphere(_topRadius + _knobBodyHeight, _topRadius, $fn = _quality);
+            translate([0, 0, -_heightOffset]) sphere(_topRadius, $fn = _quality);
         }
     }
 }
@@ -522,14 +521,6 @@ function firstPointIndex(layers, i) = fPI_(layers, 0, i, 0);
 // recursive helper for firstPointIndex
 function fPI_(layers, i, target, sum) =
     i == target ? sum : fPI_(layers, i + 1, target, sum + len(layers[i]));
-
-// make a hollow sphere
-module hollowSphere(outerRadius, innerRadius) {
-    difference() {
-        sphere(outerRadius);
-        sphere(innerRadius);
-    }
-}
 
 /****************************************************************
  * more or less general functions and modules to handle polygons

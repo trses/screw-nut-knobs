@@ -187,6 +187,9 @@ const port = 3000;
 
 app.use(express.static(publicPath));
 
+// not delivering a favicon, suppress the 404 error
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 app.get('/api/v1/mesh', (req, res) => {
     console.log(req.query);
 

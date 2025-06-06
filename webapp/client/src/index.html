@@ -2,19 +2,20 @@
 <html>
 
 <head>
-    <title>prototype knb generator</title>
+    <title>prototype knob generator</title>
     <link href="lib/bootstrap-5.3.3-dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="lib/stl_viewer/stl_viewer.min.js"></script>
 
 <script>
-    let stlViewer = undefined;
+let stlViewer = undefined;
 
-    const init = () => {
-        // https://www.viewstl.com/plugin/
-        stlViewer = new StlViewer(document.getElementById('targetStl'), {models: []});
+const init = () => {
+    // https://www.viewstl.com/plugin/
+    // https://github.com/omrips/viewstl
+    stlViewer = new StlViewer(document.getElementById('targetStl'), {models: []});
 
-        console.log(stlViewer);
-    };
+    console.log(stlViewer);
+};
 
 const onSubmitClicked = (event) => {
     event.preventDefault();

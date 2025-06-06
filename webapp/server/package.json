@@ -4,7 +4,7 @@
   "description": "Web based Configurator for the screw-nut-knobs OpenSCAD file",
   "main": "src/index.js",
   "scripts": {
-    "server": "node --env-file=dev.env src/index.js",
+    "start": "node --env-file=dev.env src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Thomas Richter",

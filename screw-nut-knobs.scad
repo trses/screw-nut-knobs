@@ -1,7 +1,7 @@
 /**
  * Creates handles for hexagon head screws, Allen / Inbus screws and hexagonal nuts.
  * Various parameters can be controlled:
- * SIZE: M4, M5, M6, M8, the arrays can be extended for further sizes
+ * SIZE: M3 - M16, the arrays can be extended for further sizes
  * TYPE: knob for hex nut / screw, with or without hub, allen screw with lockhub
  * SHAPE: flat or rounded top
  * ARMS: number of "arms" of the star shaped knob
@@ -28,9 +28,14 @@
  *          Creative Commons 4.0 Attribution — Noncommercial — Share Alike
  *          https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
+ * See more details on printables.com:
+ * https://www.printables.com/model/1116311 
+ *
  * Author: Thomas Richter
  * Contact: mail@thomas-richter.info
  */
+ 
+ // TODO: add a set of dimensions to fit the shapes of DIN 6336
 
 /*****************************************
  * START PARAMETERS
@@ -51,7 +56,7 @@ SIZE = "M8"; // [M3, M4, M5, M6, M8, M10, M12, M14, M16, free]
 // - hexnohub : make a knob without hub hub for a hex nut or screw (if you want to use a lockhub)
 // - allen: make a knob with hub for an Allen screw with lock nut in the hub
 // - inbus: make a knob with hub for an Allen screw with lock nut in the hub, is the same as allen, convenience option for German users
-// - lockhub: make a standalone hub with a cutout for a nut. This can be used as a lock nut for screwx knobs
+// - lockhub: make a standalone hub with a cutout for a nut. This can be used as a lock nut for hexnohub knobs
 // what should be made
 TYPE = "hex"; // [hex, allen, inbus, hexnohub, lockhub]
 
@@ -122,7 +127,7 @@ screws = [
     ["M14", 14, 24.49, 11.0, 21.0, 14],
     ["M16", 16, 26.75, 13.0, 24.0, 16],
     
-    // TODO
+    // TODO:
     // US dimensions according to ASME B18.2.1, ASME B18.2.2 
     // name, thread size, head diameter across corners (e), head height (h), allen head diameter, allen head height]
     // ["5/32"]
@@ -204,7 +209,7 @@ _hubHeight = screwDiameter * 1.2;
 _hubDiameter = screwHeadDiameter + screwDiameter;
 
 // number of layers of the rounded edge, must at least be two
-// note: layers of points, one larger than the resulting numer of layers of faces
+// note: layers of points, one larger than the resulting number of layers of faces
 elTemp = round(_quality * _edgeRadius / _knobDiameter);
 _edgeLayerCount = elTemp >= 2 ? elTemp : 2;
 
@@ -236,8 +241,11 @@ module knob(makeHub = false) {
         // TODO: remove after fixing _knobBodyHeight optimisation
         cutOffset = SHAPE == "rounded" ? _edgeRadius : 0;
         
-        translate([0, 0, _knobBodyHeight - screwHeadHeight + cutOffset])
-            cylinder(h = screwHeadHeight, d = screwHeadDiameter, $fn = edges);
+        // rotate so that the flat side of the hexagonal cut-out points in the
+        // direction of the notch for a greater wall thickness
+        rotate([0, 0, 30])
+            translate([0, 0, _knobBodyHeight - screwHeadHeight + cutOffset])
+                cylinder(h = screwHeadHeight, d = screwHeadDiameter, $fn = edges);
     }
     
     // make a hub
